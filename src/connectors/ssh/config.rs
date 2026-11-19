@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use glob::glob;
 use ssh2_config::{HostParams, ParseRule, SshConfig};
 
+use crate::api::USER_HOME_PATH_PREFIX;
+
 pub(super) const HOME_ENVIRONMENT_VARIABLE: &str = "HOME";
 pub(super) const SSH_AUTH_SOCK_ENVIRONMENT_VARIABLE: &str = "SSH_AUTH_SOCK";
 
@@ -35,7 +37,7 @@ fn config_path(configured_path: Option<&str>) -> Option<PathBuf> {
 }
 
 pub(super) fn expand_user(path: &str) -> PathBuf {
-    if let Some(rest) = path.strip_prefix("~/")
+    if let Some(rest) = path.strip_prefix(USER_HOME_PATH_PREFIX)
         && let Some(home) = env::var_os(HOME_ENVIRONMENT_VARIABLE)
     {
         return PathBuf::from(home).join(rest);

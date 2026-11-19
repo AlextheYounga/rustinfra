@@ -1,10 +1,14 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use indexmap::IndexMap;
 use thiserror::Error;
 
-use crate::api::{State, StateError, StateStage};
-use crate::connectors::{ConnectionManager, ConnectionManagerError, Connector};
+use crate::api::{ConnectorKind, Inventory, InventoryError, State, StateError, StateStage};
+use crate::connectors::{
+    ConnectionManager, ConnectionManagerError, Connector, LocalConnector, SshConnectionOptions, SshConnector,
+    SshOptionsError,
+};
 
 use super::{ExecutionStrategy, PreparedDeploy, Scheduler, SchedulerError};
 
@@ -17,6 +21,26 @@ impl DeployRuntime {
     #[must_use]
     pub fn new(connectors: IndexMap<String, Arc<dyn Connector>>) -> Self {
         Self { connectors }
+    }
+
+    /// Creates the built-in local and SSH connectors selected by an inventory.
+    pub fn from_inventory(inventory: &Inventory, connect_timeout: Duration) -> Result<Self, DeployRuntimeError> {
+        let mut connectors = IndexMap::<String, Arc<dyn Connector>>::new();
+        for host in inventory.hosts() {
+            let connector: Arc<dyn Connector> = match host.connector() {
+                ConnectorKind::Local => Arc::new(LocalConnector),
+                ConnectorKind::Ssh => {
+                    let data = inventory.resolved_host_data(host.name())?;
+                    let options = SshConnectionOptions::from_data(host.name(), &data, connect_timeout)?;
+                    Arc::new(SshConnector::new(options))
+                }
+                ConnectorKind::External(connector) => {
+                    return Err(DeployRuntimeError::UnsupportedConnector(connector.clone()));
+                }
+            };
+            connectors.insert(host.name().to_owned(), connector);
+        }
+        Ok(Self::new(connectors))
     }
 
     /// Connects, executes the prepared plan, and disconnects every connected host.
@@ -43,9 +67,9 @@ impl DeployRuntime {
         match (result, disconnect) {
             (Ok(()), Ok(())) => Ok(()),
             (Err(error), Ok(())) => Err(error),
-            (Ok(()), Err(error)) => Err(DeployRuntimeError::Connection(error)),
+            (Ok(()), Err(error)) => Err(error.into()),
             (Err(error), Err(disconnect)) => {
-                Err(DeployRuntimeError::RunAndDisconnect { run: error.to_string(), disconnect })
+                Err(DeployRuntimeError::RunAndDisconnect { run: error.to_string(), disconnect: Box::new(disconnect) })
             }
         }
     }
@@ -65,13 +89,25 @@ pub enum DeployRuntimeError {
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]
-    Connection(#[from] ConnectionManagerError),
+    Connection(Box<ConnectionManagerError>),
     #[error(transparent)]
     Deploy(#[from] super::DeployError),
     #[error(transparent)]
     Scheduler(#[from] SchedulerError),
+    #[error(transparent)]
+    Inventory(#[from] InventoryError),
+    #[error(transparent)]
+    SshOptions(#[from] SshOptionsError),
+    #[error("no runtime implementation is registered for connector {0}")]
+    UnsupportedConnector(String),
     #[error("deploy failed ({run}) and disconnect also failed: {disconnect}")]
-    RunAndDisconnect { run: String, disconnect: ConnectionManagerError },
+    RunAndDisconnect { run: String, disconnect: Box<ConnectionManagerError> },
+}
+
+impl From<ConnectionManagerError> for DeployRuntimeError {
+    fn from(error: ConnectionManagerError) -> Self {
+        Self::Connection(Box::new(error))
+    }
 }
 
 #[cfg(test)]
@@ -81,11 +117,32 @@ mod tests {
 
     use indexmap::IndexMap;
 
-    use super::DeployRuntime;
-    use crate::api::{Config, HostSpec, Inventory, InventorySpec, State, StateStage};
+    use super::{DeployRuntime, Duration};
+    use crate::api::{Config, ConnectorKind, Data, HostSpec, Inventory, InventorySpec, State, StateStage};
     use crate::connectors::{Connector, LocalConnector};
     use crate::operations::server::{Shell, ShellCommands};
-    use crate::operations::{ExecutionStrategy, PreparedDeploy};
+    use crate::operations::{DeployRuntimeError, ExecutionStrategy, PreparedDeploy};
+
+    #[test]
+    fn runtime_builds_builtin_connectors_and_rejects_unimplemented_external_connectors() {
+        let local =
+            Inventory::from_spec(InventorySpec { hosts: vec![HostSpec::local()], ..InventorySpec::default() }).unwrap();
+        let external = Inventory::from_spec(InventorySpec {
+            hosts: vec![HostSpec {
+                name: "container".to_owned(),
+                data: Data::new(),
+                connector: ConnectorKind::External("docker".to_owned()),
+            }],
+            ..InventorySpec::default()
+        })
+        .unwrap();
+
+        assert!(DeployRuntime::from_inventory(&local, Duration::from_secs(1)).is_ok());
+        assert!(matches!(
+            DeployRuntime::from_inventory(&external, Duration::from_secs(1)),
+            Err(DeployRuntimeError::UnsupportedConnector(connector)) if connector == "docker"
+        ));
+    }
 
     #[tokio::test]
     async fn runtime_executes_host_specific_commands_through_the_full_lifecycle() {

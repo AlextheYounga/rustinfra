@@ -1,5 +1,8 @@
 //! Public types used to describe and execute deploys.
 
+/// Shell/path prefix denoting the current user's home directory.
+pub const USER_HOME_PATH_PREFIX: &str = "~/";
+
 mod command;
 mod config;
 mod inventory;
