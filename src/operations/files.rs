@@ -9,6 +9,9 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+mod link;
+pub use link::{Link, LinkInput};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileInput {
     pub path: String,
