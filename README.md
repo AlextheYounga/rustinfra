@@ -42,5 +42,6 @@ Run the included example with:
 cargo run --example local_deploy
 ```
 
-The translation is in progress. See `PARITY.md` for implemented capabilities and remaining work,
-and `CONTEXT.md` and `AGENTS.md` for compatibility requirements and architecture rules.
+The translation has reached the documented 75% product-capability milestone and remains in
+progress. See `PARITY.md` for the milestone definition and remaining work, and `CONTEXT.md` and
+`AGENTS.md` for compatibility requirements and architecture rules.

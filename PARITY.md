@@ -1,5 +1,37 @@
 # Parity status
 
+## 75% capability milestone
+
+Rustinfra has reached the 75% product-capability milestone. As with the 50% milestone below, this
+measures complete deploy workflows rather than the percentage of pyinfra operation and fact names
+that have been translated.
+
+In addition to the 50% runtime, concurrency, connector, and package-management foundation, this
+milestone adds the capabilities needed for a common application deployment:
+
+- System users and groups can be created, updated, and removed with Linux and FreeBSD command
+  behavior, secondary groups, home ownership, UID, shell, comment, system-account, and password
+  controls.
+- Systemd units can be started, stopped, restarted, reloaded, enabled, disabled, and managed in
+  user or machine scopes, including daemon reload and non-service unit types.
+- Templates are rendered from structured typed data with strict undefined-variable handling and
+  uploaded only when their rendered content or requested metadata differs.
+- Individual configuration lines can be appended, replaced, or removed with grep/sed-compatible
+  matching, optional backups, extended regular expressions, and execution-time idempotency checks.
+- Sysctl values are read into typed scalar/list values, converged at runtime, and optionally
+  persisted through line convergence.
+- Git repositories can be cloned or updated with branch, tag, depth, force, rebase, remote URL,
+  submodule, ownership, and already-up-to-date handling.
+- Local or remote tar and zip archives can be extracted with format detection, idempotent `creates`
+  checks, temporary upload cleanup, additional options, and recursive ownership.
+- Generated in-memory content uses the same local/SSH transfer boundary as file uploads without
+  leaking persistent local temporary files.
+
+These additions retain the source-first workflow: focused pyinfra source and fixtures define command
+ordering, quoting, parsing, no-op behavior, and platform differences. The all-target/all-feature
+suite covers the resulting facts and operations, including local end-to-end convergence and the
+persistent SSH integration test.
+
 ## 50% capability milestone
 
 Rustinfra has reached the initial 50% product-capability milestone. This milestone measures whether
@@ -28,17 +60,19 @@ convergence and a persistent SSH integration test.
 
 ## Implemented operation areas
 
-- `server`: shell, wait, kill, hostname, and group.
-- `files`: file, directory, link, put, and get.
+- `server`: shell, wait, kill, hostname, group, user, and sysctl.
+- `systemd`: service state, enablement, daemon reload, and user/machine scopes.
+- `files`: file, directory, link, put, get, template, line, and unarchive.
 - `apt`: package installation, removal, version convergence, updates, and common controls.
 - `dnf`: package installation, removal, version convergence, updates, cleaning, and latest packages.
+- `git`: repository clone, update, checkout, remote reconciliation, and submodules.
 
 ## Remaining work toward full parity
 
-The 50% milestone is not full pyinfra compatibility. Major remaining areas include:
+The 75% milestone is not full pyinfra compatibility. Major remaining areas include:
 
-- The remainder of the operation and fact catalog, including users, services, repositories,
-  templates, archives, databases, language package managers, firewalls, and system configuration.
+- The remainder of the operation and fact catalog, including non-systemd init systems, package
+  repositories, databases, language package managers, firewalls, and additional system settings.
 - Preparation-time change prediction and richer no-op/change reporting.
 - Callbacks/events, progress rendering, machine-readable output, and full CLI behavior.
 - Additional connectors such as Docker/Podman, chroot, and external connector extensibility.
