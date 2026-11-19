@@ -140,6 +140,11 @@ before a compromise is accepted.
 
 The CLI will use `clap`.
 
+Deploys are authored as typed Rust code and compiled against the `rustinfra` library. Python deploy
+loading, an embedded Python runtime, and a separate YAML/TOML deploy language are not part of the
+product direction. The pyinfra codebase remains the behavioral reference for deploy preparation and
+execution semantics, not a runtime dependency.
+
 Other dependencies should be selected as their corresponding pyinfra area is translated. Prefer
 the Rust standard library or focused, mature crates over custom implementations. Likely crate-backed
 areas include concurrency, SSH, serialization, templating, graph ordering, progress display,
@@ -252,8 +257,6 @@ state-bearing string literals.
 The following decisions remain open and should be resolved explicitly when their implementation is
 approached:
 
-- How deploys are authored and loaded in a native Rust system, given that arbitrary Python files
-  and arbitrary Rust source have different execution models.
 - Which concurrency runtime best preserves the required scheduling and I/O behavior.
 - Which SSH crate or combination of crates can meet the compatibility requirements.
 - How connector extensibility maps from Python entry points to Rust without introducing an

@@ -176,7 +176,9 @@ code, and unnecessary differences from pyinfra.
 
 ## Open Decisions
 
-Some product boundaries are not settled yet, including the deploy authoring/loading format and the
-exact concurrency and SSH crates. Do not decide these implicitly while implementing another
-feature. Present the relevant pyinfra behavior, Rust constraints, and smallest viable choices for
-human agreement.
+Deploys are authored as typed Rust code and compiled against rustinfra. Do not add a Python runtime,
+Python compatibility frontend, or a separate declarative deploy language.
+
+Other product boundaries remain unsettled, including connector extensibility. Do not decide these
+implicitly while implementing another feature. Present the relevant pyinfra behavior, Rust
+constraints, and smallest viable choices for human agreement.
