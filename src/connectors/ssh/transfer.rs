@@ -1,11 +1,11 @@
 use std::path::Path;
 
-use sha1::{Digest, Sha1};
 use tempfile::NamedTempFile;
 use tokio::fs::{self, File};
 use tokio::io::{self, AsyncWriteExt};
 
 use super::{FileTransferProtocol, SshConnector, SshConnectorError};
+use crate::api::sha1_hex;
 use crate::api::{CommandBit, StringCommand};
 use crate::connectors::{CommandResult, FileTransferOptions, RunOptions};
 
@@ -139,13 +139,7 @@ fn temporary_filename(hash_key: &str, explicit: Option<&str>, options: &RunOptio
     if let Some(explicit) = explicit {
         return explicit.to_owned();
     }
-    let hash = Sha1::digest(hash_key.as_bytes());
-    let mut hash_hex = String::with_capacity(hash.len() * 2);
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    for byte in hash {
-        hash_hex.push(char::from(HEX[usize::from(byte >> 4)]));
-        hash_hex.push(char::from(HEX[usize::from(byte & 0x0f)]));
-    }
+    let hash_hex = sha1_hex(hash_key.as_bytes());
     format!("{}/pyinfra-{hash_hex}", options.remote_temp_directory.trim_end_matches('/'))
 }
 

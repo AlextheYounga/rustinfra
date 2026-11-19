@@ -10,7 +10,9 @@ use crate::facts::{FactExecutor, FactOptions};
 use super::{StatefulOperation, StatefulOperationFuture};
 
 mod link;
+mod put;
 pub use link::{Link, LinkInput};
+pub use put::{Put, PutInput};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileInput {
