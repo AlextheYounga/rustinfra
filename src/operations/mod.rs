@@ -7,6 +7,7 @@ use std::pin::Pin;
 pub mod apt;
 mod command_executor;
 mod deploy;
+pub mod dnf;
 pub mod files;
 mod order;
 mod prepared_runner;
