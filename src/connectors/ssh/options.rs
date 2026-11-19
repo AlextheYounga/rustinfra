@@ -36,8 +36,9 @@ pub struct SshConnectionOptions {
     pub config_identity_files: Vec<PathBuf>,
     pub key_password: Option<HiddenValue>,
     pub allow_agent: bool,
+    pub identity_agent: Option<PathBuf>,
     pub look_for_keys: bool,
-    pub known_hosts_file: Option<PathBuf>,
+    pub known_hosts_files: Vec<PathBuf>,
     pub host_key_policy: HostKeyPolicy,
     pub connect_timeout: Duration,
     pub server_alive_interval: Option<Duration>,
@@ -79,7 +80,9 @@ impl SshConnectionOptions {
             Some(user) if !user.is_empty() => user.to_owned(),
             _ => env::var("USER").map_err(|_| SshOptionsError::MissingUser)?,
         };
-        let policy = optional_string(data, "ssh_strict_host_key_checking")?.unwrap_or("accept-new");
+        let policy = optional_string(data, "ssh_strict_host_key_checking")?
+            .or_else(|| unsupported_value(resolved.as_ref(), "stricthostkeychecking"))
+            .unwrap_or("accept-new");
         let host_key_policy = match policy {
             "ask" => HostKeyPolicy::Ask,
             "no" | "off" => HostKeyPolicy::Accept,
@@ -107,6 +110,16 @@ impl SshConnectionOptions {
         } else {
             Vec::new()
         };
+        let known_hosts_files = match optional_string(data, "ssh_known_hosts_file")?.filter(|value| !value.is_empty()) {
+            Some(path) => vec![config::expand_user(path)],
+            None => unsupported_values(resolved.as_ref(), "userknownhostsfile")
+                .into_iter()
+                .map(config::expand_user)
+                .collect(),
+        };
+        let identity_agent = unsupported_value(resolved.as_ref(), "identityagent")
+            .filter(|path| !path.eq_ignore_ascii_case("none"))
+            .map(config::expand_user);
 
         Ok(Self {
             hostname,
@@ -117,10 +130,9 @@ impl SshConnectionOptions {
             config_identity_files,
             key_password: optional_secret(data, "ssh_key_password")?,
             allow_agent: optional_bool(data, "ssh_allow_agent")?.unwrap_or(true),
+            identity_agent,
             look_for_keys: optional_bool(data, "ssh_look_for_keys")?.unwrap_or(true),
-            known_hosts_file: optional_string(data, "ssh_known_hosts_file")?
-                .filter(|value| !value.is_empty())
-                .map(PathBuf::from),
+            known_hosts_files,
             host_key_policy,
             connect_timeout,
             server_alive_interval: resolved.as_ref().and_then(|params| params.server_alive_interval),
@@ -186,6 +198,17 @@ fn duration_from_seconds(key: &'static str, seconds: f64) -> Result<Duration, Ss
         .map_err(|_| SshOptionsError::InvalidType { key, expected: "a duration supported by this platform" })
 }
 
+fn unsupported_values<'a>(params: Option<&'a ssh2_config::HostParams>, key: &str) -> Vec<&'a str> {
+    params
+        .and_then(|params| params.unsupported_fields.get(key))
+        .map(|values| values.iter().map(String::as_str).collect())
+        .unwrap_or_default()
+}
+
+fn unsupported_value<'a>(params: Option<&'a ssh2_config::HostParams>, key: &str) -> Option<&'a str> {
+    unsupported_values(params, key).into_iter().next()
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -240,7 +263,7 @@ mod tests {
         let config = directory.path().join("config");
         fs::write(
             &config,
-            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  ServerAliveInterval 15\n",
+            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n",
         )
         .unwrap();
         let data = [
@@ -260,5 +283,9 @@ mod tests {
         assert_eq!(options.key, Some("/inventory/key".into()));
         assert!(options.config_identity_files.is_empty());
         assert_eq!(options.server_alive_interval, Some(Duration::from_secs(15)));
+        assert_eq!(options.host_key_policy, HostKeyPolicy::Strict);
+        assert_eq!(options.known_hosts_files.len(), 2);
+        assert!(options.known_hosts_files[0].ends_with("known-one"));
+        assert!(options.identity_agent.as_ref().is_some_and(|path| path.ends_with("agent.sock")));
     }
 }

@@ -15,7 +15,7 @@ async fn accept_new_records_unknown_keys_but_rejects_changed_keys() {
     let mut handler = ServerKeyHandler {
         hostname: "host.example".to_owned(),
         port: 22,
-        known_hosts_file: Some(known_hosts.clone()),
+        known_hosts_files: vec![known_hosts.clone()],
         policy: HostKeyPolicy::AcceptNew,
     };
 

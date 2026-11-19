@@ -33,7 +33,7 @@ fn config_path(configured_path: Option<&str>) -> Option<PathBuf> {
     }
 }
 
-fn expand_user(path: &str) -> PathBuf {
+pub(super) fn expand_user(path: &str) -> PathBuf {
     if let Some(rest) = path.strip_prefix("~/")
         && let Some(home) = env::var_os(HOME_ENVIRONMENT_VARIABLE)
     {

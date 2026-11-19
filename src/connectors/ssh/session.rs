@@ -16,7 +16,7 @@ use tokio::time;
 
 use crate::api::{RsyncCommand, StringCommand};
 
-use super::auth::{authenticate_agent, authenticate_config_keys, authenticate_default_keys, authenticate_key};
+use super::auth::{authenticate_agent_at, authenticate_config_keys, authenticate_default_keys, authenticate_key};
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use crate::connectors::{
@@ -84,7 +84,7 @@ impl SshConnector {
         let handler = ServerKeyHandler {
             hostname: self.options.hostname.clone(),
             port: self.options.port,
-            known_hosts_file: self.options.known_hosts_file.clone(),
+            known_hosts_files: self.options.known_hosts_files.clone(),
             policy: self.options.host_key_policy,
         };
         let address = (self.options.hostname.as_str(), self.options.port);
@@ -119,7 +119,9 @@ impl SshConnector {
             {
                 return Ok(true);
             }
-            if self.options.allow_agent && authenticate_agent(session, &self.options.user).await? {
+            if self.options.allow_agent
+                && authenticate_agent_at(session, &self.options.user, self.options.identity_agent.as_deref()).await?
+            {
                 return Ok(true);
             }
             if self.options.look_for_keys && authenticate_default_keys(session, &self.options.user).await? {
@@ -279,7 +281,7 @@ async fn execute_channel(
 pub(super) struct ServerKeyHandler {
     hostname: String,
     port: u16,
-    known_hosts_file: Option<PathBuf>,
+    known_hosts_files: Vec<PathBuf>,
     policy: HostKeyPolicy,
 }
 
@@ -312,14 +314,19 @@ impl client::Handler for ServerKeyHandler {
 
 impl ServerKeyHandler {
     fn check_known_host(&self, key: &PublicKey) -> Result<bool, KeyError> {
-        match &self.known_hosts_file {
-            Some(path) => check_known_hosts_path(&self.hostname, self.port, key, path),
-            None => check_known_hosts(&self.hostname, self.port, key),
+        if self.known_hosts_files.is_empty() {
+            return check_known_hosts(&self.hostname, self.port, key);
         }
+        for path in &self.known_hosts_files {
+            if check_known_hosts_path(&self.hostname, self.port, key, path)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     fn learn_known_host(&self, key: &PublicKey) -> Result<(), KeyError> {
-        match &self.known_hosts_file {
+        match self.known_hosts_files.first() {
             Some(path) => learn_known_hosts_path(&self.hostname, self.port, key, path),
             None => learn_known_hosts(&self.hostname, self.port, key),
         }

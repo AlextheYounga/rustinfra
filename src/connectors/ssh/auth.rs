@@ -43,11 +43,19 @@ pub(super) async fn authenticate_config_keys(
 }
 
 #[cfg(unix)]
-pub(super) async fn authenticate_agent(session: &mut SshHandle, user: &str) -> Result<bool, SshConnectorError> {
+pub(super) async fn authenticate_agent_at(
+    session: &mut SshHandle,
+    user: &str,
+    path: Option<&Path>,
+) -> Result<bool, SshConnectorError> {
     use russh::keys::agent::AgentIdentity;
     use russh::keys::agent::client::AgentClient;
 
-    let Ok(mut agent) = AgentClient::connect_env().await else {
+    let agent = match path {
+        Some(path) => AgentClient::connect_uds(path).await,
+        None => AgentClient::connect_env().await,
+    };
+    let Ok(mut agent) = agent else {
         return Ok(false);
     };
     if let Some(binding) = session.agent_session_binding() {
@@ -73,7 +81,11 @@ pub(super) async fn authenticate_agent(session: &mut SshHandle, user: &str) -> R
 }
 
 #[cfg(not(unix))]
-pub(super) async fn authenticate_agent(_session: &mut SshHandle, _user: &str) -> Result<bool, SshConnectorError> {
+pub(super) async fn authenticate_agent_at(
+    _session: &mut SshHandle,
+    _user: &str,
+    _path: Option<&Path>,
+) -> Result<bool, SshConnectorError> {
     Ok(false)
 }
 
