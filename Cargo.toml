@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+indexmap = "2"
+serde_json = { version = "1", features = ["preserve_order"] }
+tempfile = "3"
+thiserror = "2"
+tokio = { version = "1", features = ["process", "io-util", "time", "rt", "macros", "sync", "fs"] }
 
 [lints.clippy]
 correctness = { level = "deny", priority = -1 }
