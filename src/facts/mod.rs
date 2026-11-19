@@ -3,6 +3,7 @@
 pub mod deb;
 mod executor;
 pub mod files;
+pub mod git;
 pub mod rpm;
 pub mod server;
 pub mod systemd;

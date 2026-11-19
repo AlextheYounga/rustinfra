@@ -2,6 +2,7 @@
 
 /// Shell/path prefix denoting the current user's home directory.
 pub const USER_HOME_PATH_PREFIX: &str = "~/";
+pub(crate) const IGNORE_STDERR_AND_FAILURE: &str = "2>/dev/null || true";
 
 pub(crate) fn sha1_hex(value: &[u8]) -> String {
     use sha1::{Digest, Sha1};

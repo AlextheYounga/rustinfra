@@ -9,6 +9,7 @@ mod command_executor;
 mod deploy;
 pub mod dnf;
 pub mod files;
+pub mod git;
 mod order;
 mod prepared_runner;
 mod retry;

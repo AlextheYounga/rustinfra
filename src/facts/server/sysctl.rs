@@ -2,7 +2,7 @@ use std::error::Error;
 
 use indexmap::IndexMap;
 
-use crate::api::{CommandBit, StringCommand};
+use crate::api::{CommandBit, IGNORE_STDERR_AND_FAILURE, StringCommand};
 use crate::facts::Fact;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -63,7 +63,7 @@ impl Fact for Sysctl {
             Some(keys) => {
                 let mut bits = vec![CommandBit::from("sysctl")];
                 bits.extend(keys.iter().cloned().map(CommandBit::quoted));
-                bits.push(CommandBit::from("2>/dev/null || true"));
+                bits.push(CommandBit::from(IGNORE_STDERR_AND_FAILURE));
                 StringCommand::new(bits)
             }
         }
