@@ -14,11 +14,13 @@ mod line;
 mod link;
 mod put;
 mod template;
+mod unarchive;
 pub use get::{Get, GetInput};
 pub use line::{Line, LineBackup, LineInput};
 pub use link::{Link, LinkInput};
 pub use put::{Put, PutInput};
 pub use template::{Template, TemplateInput};
+pub use unarchive::{Unarchive, UnarchiveInput};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileInput {

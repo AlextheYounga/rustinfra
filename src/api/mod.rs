@@ -17,6 +17,10 @@ pub(crate) fn sha1_hex(value: &[u8]) -> String {
     hash_hex
 }
 
+pub(crate) fn remote_temporary_filename(directory: &str, key: &[u8]) -> String {
+    format!("{}/pyinfra-{}", directory.trim_end_matches('/'), sha1_hex(key))
+}
+
 mod command;
 mod config;
 mod inventory;

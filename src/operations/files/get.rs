@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use tokio::fs;
 
-use crate::api::{Command, FileDownloadCommand, sha1_hex};
+use crate::api::{Command, FileDownloadCommand, remote_temporary_filename, sha1_hex};
 use crate::connectors::Connector;
 use crate::facts::files::{PathInput, Sha1File};
 use crate::facts::{FactExecutor, FactOptions};
@@ -61,10 +61,9 @@ impl StatefulOperation for Get {
             if !input.force && remote_hash.is_some() && remote_hash == local_hash {
                 return Ok(Vec::new());
             }
-            let temporary = format!(
-                "{}/pyinfra-{}",
-                fact_options.run.remote_temp_directory.trim_end_matches('/'),
-                sha1_hex(input.destination.to_string_lossy().as_bytes())
+            let temporary = remote_temporary_filename(
+                &fact_options.run.remote_temp_directory,
+                input.destination.to_string_lossy().as_bytes(),
             );
             Ok(vec![Command::Download(FileDownloadCommand {
                 source: input.source.clone(),

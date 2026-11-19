@@ -5,7 +5,7 @@ use tokio::fs::{self, File};
 use tokio::io::{self, AsyncWriteExt};
 
 use super::{FileTransferProtocol, SshConnector, SshConnectorError};
-use crate::api::sha1_hex;
+use crate::api::remote_temporary_filename;
 use crate::api::{CommandBit, StringCommand};
 use crate::connectors::{CommandResult, FileTransferOptions, RunOptions};
 
@@ -139,8 +139,7 @@ fn temporary_filename(hash_key: &str, explicit: Option<&str>, options: &RunOptio
     if let Some(explicit) = explicit {
         return explicit.to_owned();
     }
-    let hash_hex = sha1_hex(hash_key.as_bytes());
-    format!("{}/pyinfra-{hash_hex}", options.remote_temp_directory.trim_end_matches('/'))
+    remote_temporary_filename(&options.remote_temp_directory, hash_key.as_bytes())
 }
 
 fn acl_command(user: &str, path: &str, nfs_v4: bool) -> StringCommand {
