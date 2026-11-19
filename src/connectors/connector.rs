@@ -17,10 +17,14 @@ pub type ConnectorTransferFuture<'a> = Pin<Box<dyn Future<Output = Result<(), Co
 pub enum ConnectorError {
     #[error(transparent)]
     Local(#[from] LocalConnectorError),
+    #[error("connection failed: {message}")]
+    Connection { message: String },
 }
 
 /// Executes prepared shell commands against one target.
 pub trait Connector: Send + Sync {
+    fn connect(&self) -> ConnectorTransferFuture<'_>;
+    fn disconnect(&self) -> ConnectorTransferFuture<'_>;
     fn run_shell_command<'a>(&'a self, command: StringCommand, options: &'a RunOptions) -> ConnectorFuture<'a>;
     fn put_file<'a>(
         &'a self,
@@ -38,6 +42,14 @@ pub trait Connector: Send + Sync {
 }
 
 impl Connector for LocalConnector {
+    fn connect(&self) -> ConnectorTransferFuture<'_> {
+        Box::pin(async { Ok(()) })
+    }
+
+    fn disconnect(&self) -> ConnectorTransferFuture<'_> {
+        Box::pin(async { Ok(()) })
+    }
+
     fn run_shell_command<'a>(&'a self, command: StringCommand, options: &'a RunOptions) -> ConnectorFuture<'a> {
         Box::pin(async move { self.run_shell_command(command, options).await.map_err(ConnectorError::from) })
     }
