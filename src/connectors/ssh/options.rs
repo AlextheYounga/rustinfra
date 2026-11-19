@@ -34,6 +34,7 @@ pub struct SshConnectionOptions {
     pub password: Option<HiddenValue>,
     pub key: Option<PathBuf>,
     pub config_identity_files: Vec<PathBuf>,
+    pub config_certificate_file: Option<PathBuf>,
     pub key_password: Option<HiddenValue>,
     pub allow_agent: bool,
     pub identity_agent: Option<PathBuf>,
@@ -110,6 +111,8 @@ impl SshConnectionOptions {
         } else {
             Vec::new()
         };
+        let config_certificate_file =
+            if key.is_none() { resolved.as_ref().and_then(|params| params.certificate_file.clone()) } else { None };
         let known_hosts_files = match optional_string(data, "ssh_known_hosts_file")?.filter(|value| !value.is_empty()) {
             Some(path) => vec![config::expand_user(path)],
             None => unsupported_values(resolved.as_ref(), "userknownhostsfile")
@@ -128,6 +131,7 @@ impl SshConnectionOptions {
             password: optional_secret(data, "ssh_password")?,
             key,
             config_identity_files,
+            config_certificate_file,
             key_password: optional_secret(data, "ssh_key_password")?,
             allow_agent: optional_bool(data, "ssh_allow_agent")?.unwrap_or(true),
             identity_agent,
@@ -263,7 +267,7 @@ mod tests {
         let config = directory.path().join("config");
         fs::write(
             &config,
-            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n",
+            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  CertificateFile /config/key-cert.pub\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n",
         )
         .unwrap();
         let data = [
@@ -282,10 +286,16 @@ mod tests {
         assert_eq!(options.port, 2222);
         assert_eq!(options.key, Some("/inventory/key".into()));
         assert!(options.config_identity_files.is_empty());
+        assert_eq!(options.config_certificate_file, None);
         assert_eq!(options.server_alive_interval, Some(Duration::from_secs(15)));
         assert_eq!(options.host_key_policy, HostKeyPolicy::Strict);
         assert_eq!(options.known_hosts_files.len(), 2);
         assert!(options.known_hosts_files[0].ends_with("known-one"));
         assert!(options.identity_agent.as_ref().is_some_and(|path| path.ends_with("agent.sock")));
+
+        let config_only_data = [("ssh_config_file".to_owned(), json!(config))].into_iter().collect::<Data>();
+        let config_only = SshConnectionOptions::from_data("alias", &config_only_data, Duration::from_secs(7)).unwrap();
+        assert_eq!(config_only.config_identity_files.len(), 2);
+        assert_eq!(config_only.config_certificate_file, Some("/config/key-cert.pub".into()));
     }
 }

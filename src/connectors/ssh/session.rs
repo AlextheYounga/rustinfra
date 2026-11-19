@@ -16,7 +16,9 @@ use tokio::time;
 
 use crate::api::{RsyncCommand, StringCommand};
 
-use super::auth::{authenticate_agent_at, authenticate_config_keys, authenticate_default_keys, authenticate_key};
+use super::auth::{
+    KeyAuthentication, authenticate_agent_at, authenticate_config_keys, authenticate_default_keys, authenticate_key,
+};
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use crate::connectors::{
@@ -105,7 +107,9 @@ impl SshConnector {
 
     async fn authenticate(&self, session: &mut SshHandle) -> Result<bool, SshConnectorError> {
         if let Some(key_path) = &self.options.key {
-            if authenticate_key(session, &self.options.user, key_path, self.options.key_password.as_ref()).await? {
+            let authentication =
+                KeyAuthentication { password: self.options.key_password.as_ref(), ..Default::default() };
+            if authenticate_key(session, &self.options.user, key_path, authentication).await? {
                 return Ok(true);
             }
         } else {
@@ -113,7 +117,10 @@ impl SshConnector {
                 session,
                 &self.options.user,
                 &self.options.config_identity_files,
-                self.options.key_password.as_ref(),
+                KeyAuthentication {
+                    certificate_path: self.options.config_certificate_file.as_deref(),
+                    password: self.options.key_password.as_ref(),
+                },
             )
             .await?
             {

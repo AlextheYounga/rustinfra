@@ -8,17 +8,24 @@ use super::config::HOME_ENVIRONMENT_VARIABLE;
 use super::session::{SshConnectorError, SshHandle};
 use crate::api::HiddenValue;
 
+#[derive(Clone, Copy, Default)]
+pub(super) struct KeyAuthentication<'a> {
+    pub certificate_path: Option<&'a Path>,
+    pub password: Option<&'a HiddenValue>,
+}
+
 pub(super) async fn authenticate_key(
     session: &mut SshHandle,
     user: &str,
     path: &Path,
-    password: Option<&HiddenValue>,
+    authentication: KeyAuthentication<'_>,
 ) -> Result<bool, SshConnectorError> {
-    let key = load_secret_key(path, password.map(HiddenValue::unmask))?;
-    let mut certificate_path = path.as_os_str().to_os_string();
-    certificate_path.push("-cert.pub");
-    let certificate_path = PathBuf::from(certificate_path);
-    if certificate_path.is_file() {
+    let key = load_secret_key(path, authentication.password.map(HiddenValue::unmask))?;
+    let implicit_certificate = implicit_certificate_path(path);
+    let certificate_path = authentication
+        .certificate_path
+        .or_else(|| implicit_certificate.is_file().then_some(implicit_certificate.as_path()));
+    if let Some(certificate_path) = certificate_path {
         let certificate = load_openssh_certificate(certificate_path)?;
         return Ok(session.authenticate_openssh_cert(user, Arc::new(key), certificate).await?.success());
     }
@@ -30,10 +37,10 @@ pub(super) async fn authenticate_config_keys(
     session: &mut SshHandle,
     user: &str,
     paths: &[PathBuf],
-    password: Option<&HiddenValue>,
+    authentication: KeyAuthentication<'_>,
 ) -> Result<bool, SshConnectorError> {
     for path in paths.iter().filter(|path| path.is_file()) {
-        match authenticate_key(session, user, path, password).await {
+        match authenticate_key(session, user, path, authentication).await {
             Ok(true) => return Ok(true),
             Ok(false) | Err(SshConnectorError::Key(_) | SshConnectorError::Certificate(_)) => {}
             Err(error) => return Err(error),
@@ -94,5 +101,11 @@ pub(super) async fn authenticate_default_keys(session: &mut SshHandle, user: &st
         return Ok(false);
     };
     let paths = ["id_ed25519", "id_ecdsa", "id_rsa"].map(|name| Path::new(&home).join(".ssh").join(name));
-    authenticate_config_keys(session, user, &paths, None).await
+    authenticate_config_keys(session, user, &paths, KeyAuthentication::default()).await
+}
+
+fn implicit_certificate_path(path: &Path) -> PathBuf {
+    let mut certificate_path = path.as_os_str().to_os_string();
+    certificate_path.push("-cert.pub");
+    PathBuf::from(certificate_path)
 }
