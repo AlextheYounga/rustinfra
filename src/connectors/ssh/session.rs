@@ -1,17 +1,12 @@
-use std::env;
 use std::io::Error as IoError;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
 use russh::client;
 use russh::keys::known_hosts::{check_known_hosts_path, learn_known_hosts, learn_known_hosts_path};
 use russh::keys::ssh_key::{Error as CertificateError, PublicKey};
-use russh::keys::{
-    Error as KeyError, PrivateKeyWithHashAlg, PublicKeyOrCertificate, check_known_hosts, load_openssh_certificate,
-    load_secret_key,
-};
+use russh::keys::{Error as KeyError, PublicKeyOrCertificate, check_known_hosts};
 use russh::{Channel, ChannelMsg, Disconnect};
 use russh_sftp::client::SftpSession;
 use russh_sftp::client::error::Error as SftpError;
@@ -19,8 +14,9 @@ use thiserror::Error;
 use tokio::sync::RwLock;
 use tokio::time;
 
-use crate::api::{HiddenValue, RsyncCommand, StringCommand};
+use crate::api::{RsyncCommand, StringCommand};
 
+use super::auth::{authenticate_agent, authenticate_config_keys, authenticate_default_keys, authenticate_key};
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use crate::connectors::{
@@ -28,7 +24,7 @@ use crate::connectors::{
     FileTransferOptions, OutputStream, RunOptions, make_unix_command,
 };
 
-type SshHandle = client::Handle<ServerKeyHandler>;
+pub(super) type SshHandle = client::Handle<ServerKeyHandler>;
 
 /// SSH connection, authentication, channel, or transfer failure.
 #[derive(Debug, Error)]
@@ -81,7 +77,10 @@ impl SshConnector {
     }
 
     async fn connect_session_without_timeout(&self) -> Result<SshHandle, SshConnectorError> {
-        let config = Arc::new(client::Config::default());
+        let config = Arc::new(client::Config {
+            keepalive_interval: self.options.server_alive_interval,
+            ..client::Config::default()
+        });
         let handler = ServerKeyHandler {
             hostname: self.options.hostname.clone(),
             port: self.options.port,
@@ -110,6 +109,16 @@ impl SshConnector {
                 return Ok(true);
             }
         } else {
+            if authenticate_config_keys(
+                session,
+                &self.options.user,
+                &self.options.config_identity_files,
+                self.options.key_password.as_ref(),
+            )
+            .await?
+            {
+                return Ok(true);
+            }
             if self.options.allow_agent && authenticate_agent(session, &self.options.user).await? {
                 return Ok(true);
             }
@@ -235,76 +244,6 @@ fn retry_delay(options: &SshConnectionOptions) -> Duration {
     Duration::from_secs_f64(rand::random_range(minimum..=maximum))
 }
 
-async fn authenticate_key(
-    session: &mut SshHandle,
-    user: &str,
-    path: &Path,
-    password: Option<&HiddenValue>,
-) -> Result<bool, SshConnectorError> {
-    let key = load_secret_key(path, password.map(HiddenValue::unmask))?;
-    let mut certificate_path = path.as_os_str().to_os_string();
-    certificate_path.push("-cert.pub");
-    let certificate_path = PathBuf::from(certificate_path);
-    if certificate_path.is_file() {
-        let certificate = load_openssh_certificate(certificate_path)?;
-        return Ok(session.authenticate_openssh_cert(user, Arc::new(key), certificate).await?.success());
-    }
-    let hash = session.best_supported_rsa_hash().await?.flatten();
-    Ok(session.authenticate_publickey(user, PrivateKeyWithHashAlg::new(Arc::new(key), hash)).await?.success())
-}
-
-#[cfg(unix)]
-async fn authenticate_agent(session: &mut SshHandle, user: &str) -> Result<bool, SshConnectorError> {
-    use russh::keys::agent::AgentIdentity;
-    use russh::keys::agent::client::AgentClient;
-
-    let Ok(mut agent) = AgentClient::connect_env().await else {
-        return Ok(false);
-    };
-    if let Some(binding) = session.agent_session_binding() {
-        agent.bind_session(binding, false).await.map_err(|error| SshConnectorError::Agent(error.to_string()))?;
-    }
-    let identities = agent.request_identities().await.map_err(|error| SshConnectorError::Agent(error.to_string()))?;
-    for identity in identities {
-        let result = match identity {
-            AgentIdentity::PublicKey { key, .. } => session
-                .authenticate_publickey_with(user, key, None, &mut agent)
-                .await
-                .map_err(|error| SshConnectorError::Agent(error.to_string()))?,
-            AgentIdentity::Certificate { certificate, .. } => session
-                .authenticate_certificate_with(user, certificate, None, &mut agent)
-                .await
-                .map_err(|error| SshConnectorError::Agent(error.to_string()))?,
-        };
-        if result.success() {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
-#[cfg(not(unix))]
-async fn authenticate_agent(_session: &mut SshHandle, _user: &str) -> Result<bool, SshConnectorError> {
-    Ok(false)
-}
-
-async fn authenticate_default_keys(session: &mut SshHandle, user: &str) -> Result<bool, SshConnectorError> {
-    let Some(home) = env::var_os("HOME") else {
-        return Ok(false);
-    };
-    for name in ["id_ed25519", "id_ecdsa", "id_rsa"] {
-        let path = Path::new(&home).join(".ssh").join(name);
-        if path.is_file() {
-            match authenticate_key(session, user, &path, None).await {
-                Ok(true) => return Ok(true),
-                Ok(false) | Err(SshConnectorError::Key(_) | SshConnectorError::Certificate(_)) => {}
-                Err(error) => return Err(error),
-            }
-        }
-    }
-    Ok(false)
-}
-
 async fn execute_channel(
     session: &SshHandle,
     command: String,
@@ -337,7 +276,7 @@ async fn execute_channel(
 }
 
 #[derive(Clone)]
-struct ServerKeyHandler {
+pub(super) struct ServerKeyHandler {
     hostname: String,
     port: u16,
     known_hosts_file: Option<PathBuf>,
@@ -345,7 +284,7 @@ struct ServerKeyHandler {
 }
 
 #[derive(Debug, Error)]
-enum HandlerError {
+pub(super) enum HandlerError {
     #[error(transparent)]
     Protocol(#[from] russh::Error),
     #[error(transparent)]

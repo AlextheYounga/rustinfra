@@ -8,6 +8,8 @@ use thiserror::Error;
 
 use crate::api::{Data, HiddenValue, SSH_HOSTNAME_DATA_KEY};
 
+use super::config;
+
 /// OpenSSH-compatible handling for unknown server keys.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HostKeyPolicy {
@@ -31,12 +33,14 @@ pub struct SshConnectionOptions {
     pub user: String,
     pub password: Option<HiddenValue>,
     pub key: Option<PathBuf>,
+    pub config_identity_files: Vec<PathBuf>,
     pub key_password: Option<HiddenValue>,
     pub allow_agent: bool,
     pub look_for_keys: bool,
     pub known_hosts_file: Option<PathBuf>,
     pub host_key_policy: HostKeyPolicy,
     pub connect_timeout: Duration,
+    pub server_alive_interval: Option<Duration>,
     pub connect_retries: usize,
     pub connect_retry_min_delay: Duration,
     pub connect_retry_max_delay: Duration,
@@ -57,14 +61,21 @@ pub enum SshOptionsError {
     InvalidFileTransferProtocol(String),
     #[error("no SSH user configured and USER is not set")]
     MissingUser,
+    #[error("SSH config error: {0}")]
+    Config(String),
 }
 
 impl SshConnectionOptions {
     pub fn from_data(host_name: &str, data: &Data, connect_timeout: Duration) -> Result<Self, SshOptionsError> {
-        let hostname = optional_string(data, SSH_HOSTNAME_DATA_KEY)?.unwrap_or(host_name).to_owned();
-        let port_value = optional_u64(data, "ssh_port")?.unwrap_or(22);
+        let alias = optional_string(data, SSH_HOSTNAME_DATA_KEY)?.unwrap_or(host_name);
+        let config_file = optional_string(data, "ssh_config_file")?;
+        let resolved = config::resolve(alias, config_file).map_err(SshOptionsError::Config)?;
+        let hostname = resolved.as_ref().and_then(|params| params.host_name.as_deref()).unwrap_or(alias).to_owned();
+        let port_value = optional_u64(data, "ssh_port")?
+            .or_else(|| resolved.as_ref().and_then(|params| params.port.map(u64::from)))
+            .unwrap_or(22);
         let port = u16::try_from(port_value).map_err(|_| SshOptionsError::InvalidPort(port_value))?;
-        let user = match optional_string(data, "ssh_user")? {
+        let user = match optional_string(data, "ssh_user")?.or_else(|| resolved.as_ref()?.user.as_deref()) {
             Some(user) if !user.is_empty() => user.to_owned(),
             _ => env::var("USER").map_err(|_| SshOptionsError::MissingUser)?,
         };
@@ -90,12 +101,20 @@ impl SshConnectionOptions {
             value => return Err(SshOptionsError::InvalidFileTransferProtocol(value.to_owned())),
         };
 
+        let key = optional_string(data, "ssh_key")?.filter(|value| !value.is_empty()).map(PathBuf::from);
+        let config_identity_files = if key.is_none() {
+            resolved.as_ref().and_then(|params| params.identity_file.clone()).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
         Ok(Self {
             hostname,
             port,
             user,
             password: optional_secret(data, "ssh_password")?,
-            key: optional_string(data, "ssh_key")?.filter(|value| !value.is_empty()).map(PathBuf::from),
+            key,
+            config_identity_files,
             key_password: optional_secret(data, "ssh_key_password")?,
             allow_agent: optional_bool(data, "ssh_allow_agent")?.unwrap_or(true),
             look_for_keys: optional_bool(data, "ssh_look_for_keys")?.unwrap_or(true),
@@ -104,6 +123,7 @@ impl SshConnectionOptions {
                 .map(PathBuf::from),
             host_key_policy,
             connect_timeout,
+            server_alive_interval: resolved.as_ref().and_then(|params| params.server_alive_interval),
             connect_retries: usize::try_from(optional_u64(data, "ssh_connect_retries")?.unwrap_or(0)).map_err(
                 |_| SshOptionsError::InvalidType {
                     key: "ssh_connect_retries",
@@ -168,9 +188,11 @@ fn duration_from_seconds(key: &'static str, seconds: f64) -> Result<Duration, Ss
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::time::Duration;
 
     use serde_json::json;
+    use tempfile::tempdir;
 
     use super::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
     use crate::api::Data;
@@ -210,5 +232,33 @@ mod tests {
         let error = SshConnectionOptions::from_data("host", &data, Duration::from_secs(10)).unwrap_err();
 
         assert_eq!(error, SshOptionsError::InvalidHostKeyPolicy("sometimes".to_owned()));
+    }
+
+    #[test]
+    fn ssh_config_resolves_alias_and_inventory_values_override_connection_fields() {
+        let directory = tempdir().unwrap();
+        let config = directory.path().join("config");
+        fs::write(
+            &config,
+            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  ServerAliveInterval 15\n",
+        )
+        .unwrap();
+        let data = [
+            ("ssh_config_file".to_owned(), json!(config)),
+            ("ssh_user".to_owned(), json!("inventory-user")),
+            ("ssh_port".to_owned(), json!(2222)),
+            ("ssh_key".to_owned(), json!("/inventory/key")),
+        ]
+        .into_iter()
+        .collect::<Data>();
+
+        let options = SshConnectionOptions::from_data("alias", &data, Duration::from_secs(7)).unwrap();
+
+        assert_eq!(options.hostname, "config-host");
+        assert_eq!(options.user, "inventory-user");
+        assert_eq!(options.port, 2222);
+        assert_eq!(options.key, Some("/inventory/key".into()));
+        assert!(options.config_identity_files.is_empty());
+        assert_eq!(options.server_alive_interval, Some(Duration::from_secs(15)));
     }
 }

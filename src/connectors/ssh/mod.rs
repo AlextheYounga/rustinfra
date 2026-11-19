@@ -1,3 +1,5 @@
+mod auth;
+mod config;
 mod options;
 mod output;
 mod scp;
