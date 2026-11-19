@@ -7,6 +7,7 @@ use glob::glob;
 use ssh2_config::{HostParams, ParseRule, SshConfig};
 
 pub(super) const HOME_ENVIRONMENT_VARIABLE: &str = "HOME";
+pub(super) const SSH_AUTH_SOCK_ENVIRONMENT_VARIABLE: &str = "SSH_AUTH_SOCK";
 
 pub(super) fn resolve(host: &str, configured_path: Option<&str>) -> Result<Option<HostParams>, String> {
     let Some(path) = config_path(configured_path) else {

@@ -1,3 +1,5 @@
+#[cfg(unix)]
+use std::env;
 use std::io::Error as IoError;
 use std::mem::take;
 use std::path::{Path, PathBuf};
@@ -8,7 +10,7 @@ use russh::client;
 use russh::keys::known_hosts::{check_known_hosts_path, learn_known_hosts, learn_known_hosts_path};
 use russh::keys::ssh_key::{Error as CertificateError, PublicKey};
 use russh::keys::{Error as KeyError, PublicKeyOrCertificate, check_known_hosts};
-use russh::{Channel, ChannelMsg, Disconnect};
+use russh::{Channel, ChannelMsg, ChannelOpenFailure, Disconnect};
 use russh_sftp::client::SftpSession;
 use russh_sftp::client::error::Error as SftpError;
 use thiserror::Error;
@@ -17,6 +19,8 @@ use tokio::time;
 
 use crate::api::{RsyncCommand, StringCommand};
 
+#[cfg(unix)]
+use super::config::SSH_AUTH_SOCK_ENVIRONMENT_VARIABLE;
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use super::proxy;
@@ -85,7 +89,7 @@ impl SshConnector {
     ) -> Result<CommandResult, SshConnectorError> {
         let session = self.session.read().await.clone().ok_or(SshConnectorError::NotConnected)?;
         let unix_command = make_unix_command(command, &options.unix);
-        let execution = execute_channel(&session, unix_command.raw_value(), options);
+        let execution = execute_channel(&session, unix_command.raw_value(), options, self.options.forward_agent);
         let (exit_code, output) = match options.timeout {
             Some(timeout) => {
                 time::timeout(timeout, execution).await.map_err(|_| SshConnectorError::Timeout(timeout))??
@@ -212,8 +216,12 @@ async fn execute_channel(
     session: &SshHandle,
     command: String,
     options: &RunOptions,
+    forward_agent: bool,
 ) -> Result<(Option<i32>, CommandOutput), SshConnectorError> {
     let mut channel = session.channel_open_session().await?;
+    if forward_agent {
+        channel.agent_forward(false).await?;
+    }
     if options.get_pty {
         channel.request_pty(false, "xterm", 80, 24, 0, 0, &[]).await?;
     }
@@ -245,6 +253,7 @@ pub(super) struct ServerKeyHandler {
     port: u16,
     known_hosts_files: Vec<PathBuf>,
     policy: HostKeyPolicy,
+    forward_agent_socket: Option<PathBuf>,
 }
 
 #[derive(Debug, Error)]
@@ -272,6 +281,43 @@ impl client::Handler for ServerKeyHandler {
             },
         }
     }
+
+    #[cfg(unix)]
+    async fn server_channel_open_agent_forward(
+        &mut self,
+        channel: Channel<client::Msg>,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        use tokio::io::copy_bidirectional;
+        use tokio::net::UnixStream;
+
+        let Some(path) = &self.forward_agent_socket else {
+            reply.reject(ChannelOpenFailure::AdministrativelyProhibited).await;
+            return Ok(());
+        };
+        let Ok(mut agent) = UnixStream::connect(path).await else {
+            reply.reject(ChannelOpenFailure::ConnectFailed).await;
+            return Ok(());
+        };
+        reply.accept().await;
+        tokio::spawn(async move {
+            let mut stream = channel.into_stream();
+            let _ = copy_bidirectional(&mut stream, &mut agent).await;
+        });
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    async fn server_channel_open_agent_forward(
+        &mut self,
+        _channel: Channel<client::Msg>,
+        reply: client::ChannelOpenHandle,
+        _session: &mut client::Session,
+    ) -> Result<(), Self::Error> {
+        reply.reject(ChannelOpenFailure::AdministrativelyProhibited).await;
+        Ok(())
+    }
 }
 
 impl ServerKeyHandler {
@@ -281,6 +327,7 @@ impl ServerKeyHandler {
             port: options.port,
             known_hosts_files: options.known_hosts_files.clone(),
             policy: options.host_key_policy,
+            forward_agent_socket: forward_agent_socket(options),
         }
     }
 
@@ -302,6 +349,19 @@ impl ServerKeyHandler {
             None => learn_known_hosts(&self.hostname, self.port, key),
         }
     }
+}
+
+#[cfg(unix)]
+fn forward_agent_socket(options: &SshConnectionOptions) -> Option<PathBuf> {
+    if !options.forward_agent {
+        return None;
+    }
+    options.identity_agent.clone().or_else(|| env::var_os(SSH_AUTH_SOCK_ENVIRONMENT_VARIABLE).map(PathBuf::from))
+}
+
+#[cfg(not(unix))]
+fn forward_agent_socket(_options: &SshConnectionOptions) -> Option<PathBuf> {
+    None
 }
 
 #[cfg(test)]

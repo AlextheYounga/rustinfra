@@ -17,6 +17,7 @@ async fn accept_new_records_unknown_keys_but_rejects_changed_keys() {
         port: 22,
         known_hosts_files: vec![known_hosts.clone()],
         policy: HostKeyPolicy::AcceptNew,
+        forward_agent_socket: None,
     };
 
     let accepted = handler.check_server_key(&PublicKeyOrCertificate::from(first.public_key().clone())).await.unwrap();

@@ -15,6 +15,7 @@ fn inventory_data_overrides_ssh_defaults_and_secrets_stay_masked() {
         ("ssh_user".to_owned(), json!("deploy")),
         ("ssh_password".to_owned(), json!("secret")),
         ("ssh_allow_agent".to_owned(), json!(false)),
+        ("ssh_forward_agent".to_owned(), json!(true)),
         ("ssh_strict_host_key_checking".to_owned(), json!("yes")),
     ]
     .into_iter()
@@ -28,6 +29,7 @@ fn inventory_data_overrides_ssh_defaults_and_secrets_stay_masked() {
     assert_eq!(options.password.as_ref().unwrap().unmask(), "secret");
     assert_eq!(format!("{:?}", options.password), "Some(HiddenValue(\"*MASKED*\"))");
     assert!(!options.allow_agent);
+    assert!(options.forward_agent);
     assert_eq!(options.host_key_policy, HostKeyPolicy::Strict);
     assert_eq!(options.connect_timeout, Duration::from_secs(7));
 }
@@ -50,7 +52,7 @@ fn ssh_config_resolves_alias_and_inventory_values_override_connection_fields() {
     let config = directory.path().join("config");
     fs::write(
         &config,
-        "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  CertificateFile /config/key-cert.pub\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n",
+        "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  CertificateFile /config/key-cert.pub\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n  ForwardAgent yes\n",
     )
     .unwrap();
     let data = [
@@ -75,6 +77,7 @@ fn ssh_config_resolves_alias_and_inventory_values_override_connection_fields() {
     assert_eq!(options.known_hosts_files.len(), 2);
     assert!(options.known_hosts_files[0].ends_with("known-one"));
     assert!(options.identity_agent.as_ref().is_some_and(|path| path.ends_with("agent.sock")));
+    assert!(options.forward_agent);
 
     let config_only_data = [("ssh_config_file".to_owned(), json!(config))].into_iter().collect::<Data>();
     let config_only = SshConnectionOptions::from_data("alias", &config_only_data, Duration::from_secs(7)).unwrap();

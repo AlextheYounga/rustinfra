@@ -39,6 +39,7 @@ pub struct SshConnectionOptions {
     pub allow_agent: bool,
     pub identity_agent: Option<PathBuf>,
     pub look_for_keys: bool,
+    pub forward_agent: bool,
     pub known_hosts_files: Vec<PathBuf>,
     pub host_key_policy: HostKeyPolicy,
     pub connect_timeout: Duration,
@@ -166,6 +167,9 @@ impl SshConnectionOptions {
             allow_agent: optional_bool(data, "ssh_allow_agent")?.unwrap_or(true),
             identity_agent,
             look_for_keys: optional_bool(data, "ssh_look_for_keys")?.unwrap_or(true),
+            forward_agent: optional_bool(data, "ssh_forward_agent")?
+                .or_else(|| resolved.as_ref().and_then(|params| params.forward_agent))
+                .unwrap_or(false),
             known_hosts_files,
             host_key_policy,
             connect_timeout,

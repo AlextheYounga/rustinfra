@@ -10,18 +10,17 @@ mod ssh_connector_support;
 use russh::keys::{Algorithm, PrivateKey};
 use russh::server::{self, Server as _};
 use russh::{Channel, ChannelId, Error as RusshError};
-use russh_sftp::protocol::{Data as SftpData, FileAttributes, Handle, OpenFlags, Status, StatusCode};
-use russh_sftp::server::{Handler as SftpHandler, run as run_sftp_server};
+use russh_sftp::server::run as run_sftp_server;
 use rustinfra::api::{Data, HiddenValue, StringCommand};
 use rustinfra::connectors::{
     Connector, FileTransferOptions, FileTransferProtocol, HostKeyPolicy, RunOptions, SshConnectionOptions, SshConnector,
 };
 use serde_json::json;
-use tokio::io::copy_bidirectional;
+use tokio::io::{AsyncReadExt, AsyncWriteExt, copy_bidirectional};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex as AsyncMutex;
 
-use ssh_connector_support::run_scp_server;
+use ssh_connector_support::{MemorySftp, run_scp_server};
 
 #[derive(Clone)]
 struct CommandServer {
@@ -92,6 +91,11 @@ impl server::Handler for CommandServer {
         Ok(())
     }
 
+    async fn agent_request(&mut self, channel: ChannelId, session: &mut server::Session) -> Result<bool, Self::Error> {
+        session.channel_success(channel)?;
+        Ok(true)
+    }
+
     async fn exec_request(
         &mut self,
         channel: ChannelId,
@@ -108,6 +112,28 @@ impl server::Handler for CommandServer {
             let files = Arc::clone(&self.files);
             tokio::spawn(async move {
                 run_scp_server(scp_channel, &command, files).await;
+            });
+            return Ok(());
+        }
+        if command.contains("agent-forward") {
+            let handle = session.handle();
+            tokio::spawn(async move {
+                let output = match handle.channel_open_agent().await {
+                    Ok(channel) => {
+                        let mut stream = channel.into_stream();
+                        let mut response = [0; 4];
+                        if stream.write_all(b"ping").await.is_ok() && stream.read_exact(&mut response).await.is_ok() {
+                            response.to_vec()
+                        } else {
+                            b"agent I/O failed".to_vec()
+                        }
+                    }
+                    Err(_) => b"agent channel failed".to_vec(),
+                };
+                let _ = handle.data(channel, output).await;
+                let _ = handle.exit_status_request(channel, 0).await;
+                let _ = handle.eof(channel).await;
+                let _ = handle.close(channel).await;
             });
             return Ok(());
         }
@@ -141,67 +167,6 @@ impl server::Handler for CommandServer {
         });
         Ok(())
     }
-}
-
-struct MemorySftp {
-    files: Arc<Mutex<HashMap<String, Vec<u8>>>>,
-}
-
-impl SftpHandler for MemorySftp {
-    type Error = StatusCode;
-
-    fn unimplemented(&self) -> Self::Error {
-        StatusCode::OpUnsupported
-    }
-
-    async fn open(
-        &mut self,
-        id: u32,
-        filename: String,
-        flags: OpenFlags,
-        _attrs: FileAttributes,
-    ) -> Result<Handle, Self::Error> {
-        let mut files = self.files.lock().map_err(|_| StatusCode::Failure)?;
-        if flags.contains(OpenFlags::CREATE) {
-            files.entry(filename.clone()).or_default();
-        }
-        if flags.contains(OpenFlags::TRUNCATE) {
-            files.insert(filename.clone(), Vec::new());
-        }
-        if !files.contains_key(&filename) {
-            return Err(StatusCode::NoSuchFile);
-        }
-        Ok(Handle { id, handle: filename })
-    }
-
-    async fn write(&mut self, id: u32, handle: String, offset: u64, data: Vec<u8>) -> Result<Status, Self::Error> {
-        let mut files = self.files.lock().map_err(|_| StatusCode::Failure)?;
-        let file = files.get_mut(&handle).ok_or(StatusCode::NoSuchFile)?;
-        let offset = usize::try_from(offset).map_err(|_| StatusCode::Failure)?;
-        file.resize(file.len().max(offset + data.len()), 0);
-        file[offset..offset + data.len()].copy_from_slice(&data);
-        Ok(ok_status(id))
-    }
-
-    async fn read(&mut self, id: u32, handle: String, offset: u64, len: u32) -> Result<SftpData, Self::Error> {
-        let files = self.files.lock().map_err(|_| StatusCode::Failure)?;
-        let file = files.get(&handle).ok_or(StatusCode::NoSuchFile)?;
-        let offset = usize::try_from(offset).map_err(|_| StatusCode::Failure)?;
-        if offset >= file.len() {
-            return Err(StatusCode::Eof);
-        }
-        let len = usize::try_from(len).map_err(|_| StatusCode::Failure)?;
-        let end = file.len().min(offset.saturating_add(len));
-        Ok(SftpData { id, data: file[offset..end].to_vec() })
-    }
-
-    async fn close(&mut self, id: u32, _handle: String) -> Result<Status, Self::Error> {
-        Ok(ok_status(id))
-    }
-}
-
-fn ok_status(id: u32) -> Status {
-    Status { id, status_code: StatusCode::Ok, error_message: "Ok".to_owned(), language_tag: "en-US".to_owned() }
 }
 
 #[tokio::test]
@@ -240,6 +205,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         allow_agent: false,
         identity_agent: None,
         look_for_keys: false,
+        forward_agent: false,
         known_hosts_files: Vec::new(),
         host_key_policy: HostKeyPolicy::Accept,
         connect_timeout: Duration::from_secs(2),
@@ -311,6 +277,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         allow_agent: false,
         identity_agent: None,
         look_for_keys: false,
+        forward_agent: false,
         known_hosts_files: Vec::new(),
         host_key_policy: HostKeyPolicy::Accept,
         connect_timeout: Duration::from_secs(2),
@@ -357,6 +324,8 @@ async fn persistent_session_runs_commands_on_independent_channels() {
     {
         use std::os::unix::fs::PermissionsExt;
 
+        use tokio::net::UnixListener;
+
         let proxy_script = local.path().join("proxy-command");
         fs::write(
             &proxy_script,
@@ -380,6 +349,43 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         assert!(command_result.success);
         assert_eq!(command_result.output.stdout(), "out");
         command_connector.disconnect().await.unwrap();
+
+        let agent_path = local.path().join("agent.sock");
+        let agent_listener = UnixListener::bind(&agent_path).unwrap();
+        let agent_task = tokio::spawn(async move {
+            let (mut stream, _) = agent_listener.accept().await.unwrap();
+            let mut request = [0; 4];
+            stream.read_exact(&mut request).await.unwrap();
+            assert_eq!(&request, b"ping");
+            stream.write_all(b"pong").await.unwrap();
+        });
+        fs::write(
+            &config,
+            format!(
+                "Host agent\n  HostName 127.0.0.1\n  Port {port}\n  User deploy\n  IdentityAgent {}\n  StrictHostKeyChecking no\n",
+                agent_path.display()
+            ),
+        )
+        .unwrap();
+        let agent_data = [
+            ("ssh_config_file".to_owned(), json!(config)),
+            ("ssh_password".to_owned(), json!("secret")),
+            ("ssh_allow_agent".to_owned(), json!(false)),
+            ("ssh_forward_agent".to_owned(), json!(true)),
+        ]
+        .into_iter()
+        .collect::<Data>();
+        let agent_options = SshConnectionOptions::from_data("agent", &agent_data, Duration::from_secs(2)).unwrap();
+        let agent_connector = SshConnector::new(agent_options);
+        agent_connector.connect().await.unwrap();
+        let agent_result = agent_connector
+            .run_shell_command(StringCommand::new(["agent-forward"]), &RunOptions::default())
+            .await
+            .unwrap();
+        assert!(agent_result.success);
+        assert_eq!(agent_result.output.stdout(), "pong");
+        agent_connector.disconnect().await.unwrap();
+        agent_task.await.unwrap();
     }
 
     server_task.abort();
