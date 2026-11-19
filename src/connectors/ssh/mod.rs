@@ -3,6 +3,7 @@ mod config;
 mod options;
 mod output;
 mod proxy;
+mod rsync;
 mod scp;
 mod session;
 mod transfer;

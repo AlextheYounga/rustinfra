@@ -24,6 +24,7 @@ use super::config::SSH_AUTH_SOCK_ENVIRONMENT_VARIABLE;
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use super::proxy;
+use super::rsync;
 use crate::connectors::{
     CommandOutput, CommandResult, Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture,
     FileTransferOptions, OutputStream, RunOptions, make_unix_command,
@@ -56,12 +57,16 @@ pub enum SshConnectorError {
     Scp(String),
     #[error("SSH proxy failed: {0}")]
     Proxy(String),
+    #[error("rsync does not support {0}")]
+    RsyncUnsupported(&'static str),
+    #[error("the `rsync` binary is not available on this system")]
+    RsyncUnavailable,
+    #[error("rsync failed: {0}")]
+    RsyncFailed(String),
     #[error("SSH command requested before connecting")]
     NotConnected,
     #[error("SSH command timed out after {0:?}")]
     Timeout(Duration),
-    #[error("SSH file transfers are not implemented yet")]
-    TransferNotImplemented,
 }
 
 /// Persistent SSH connection that opens an independent channel for each command.
@@ -201,8 +206,8 @@ impl Connector for SshConnector {
         Box::pin(async move { self.get(source, destination, options).await.map_err(ConnectorError::from) })
     }
 
-    fn rsync<'a>(&'a self, _command: &'a RsyncCommand, _options: &'a RunOptions) -> ConnectorTransferFuture<'a> {
-        Box::pin(async { Err(SshConnectorError::TransferNotImplemented.into()) })
+    fn rsync<'a>(&'a self, command: &'a RsyncCommand, options: &'a RunOptions) -> ConnectorTransferFuture<'a> {
+        Box::pin(async move { rsync::run(command, options, &self.options).await.map_err(ConnectorError::from) })
     }
 }
 

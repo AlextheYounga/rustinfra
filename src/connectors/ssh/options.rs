@@ -28,6 +28,7 @@ pub enum FileTransferProtocol {
 /// Typed SSH connector data after inventory precedence has been applied.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SshConnectionOptions {
+    pub host_alias: String,
     pub hostname: String,
     pub port: u16,
     pub user: String,
@@ -51,6 +52,7 @@ pub struct SshConnectionOptions {
     pub proxy_command: Option<Vec<String>>,
     pub proxy_jump: Vec<Self>,
     pub proxy_jump_channel_timeout: Duration,
+    pub config_file: Option<PathBuf>,
 }
 
 #[derive(Clone, Debug, Error, PartialEq)]
@@ -88,6 +90,7 @@ impl SshConnectionOptions {
         }
         stack.push(alias.to_owned());
         let config_file = optional_string(data, "ssh_config_file")?;
+        let stored_config_file = config_file.filter(|path| !path.is_empty()).map(config::expand_user);
         let resolved = config::resolve(alias, config_file).map_err(SshOptionsError::Config)?;
         let hostname = resolved.as_ref().and_then(|params| params.host_name.as_deref()).unwrap_or(alias).to_owned();
         let port_value = optional_u64(data, "ssh_port")?
@@ -156,6 +159,7 @@ impl SshConnectionOptions {
         };
 
         let mut options = Self {
+            host_alias: alias.to_owned(),
             hostname,
             port,
             user,
@@ -186,6 +190,7 @@ impl SshConnectionOptions {
             proxy_command,
             proxy_jump: Vec::new(),
             proxy_jump_channel_timeout: connect_timeout,
+            config_file: stored_config_file,
         };
         for spec in proxy_specs {
             if spec.eq_ignore_ascii_case("none") {

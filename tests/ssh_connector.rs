@@ -194,6 +194,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
     });
 
     let connector = SshConnector::new(SshConnectionOptions {
+        host_alias: "127.0.0.1".to_owned(),
         hostname: "127.0.0.1".to_owned(),
         port,
         user: "deploy".to_owned(),
@@ -217,6 +218,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         proxy_command: None,
         proxy_jump: Vec::new(),
         proxy_jump_channel_timeout: Duration::from_secs(2),
+        config_file: None,
     });
     connector.connect().await.unwrap();
     let options = RunOptions { success_exit_codes: vec![7], ..RunOptions::default() };
@@ -266,6 +268,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
     connector.disconnect().await.unwrap();
 
     let scp_connector = SshConnector::new(SshConnectionOptions {
+        host_alias: "127.0.0.1".to_owned(),
         hostname: "127.0.0.1".to_owned(),
         port,
         user: "deploy".to_owned(),
@@ -289,6 +292,7 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         proxy_command: None,
         proxy_jump: Vec::new(),
         proxy_jump_channel_timeout: Duration::from_secs(2),
+        config_file: None,
     });
     scp_connector.connect().await.unwrap();
     scp_connector.put_file(&upload, "/scp-remote", transfer).await.unwrap();
