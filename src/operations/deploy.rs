@@ -9,11 +9,9 @@ use crate::api::{Host, Inventory};
 use crate::connectors::Connector;
 use crate::facts::{FactOptions, Phase};
 
-use super::scheduler::OperationFuture;
 use super::{
-    ExecutionPlan, Operation, OperationExecution, OperationExecutionOptions, OperationExecutor, OperationGraph,
-    OperationId, OperationMeta, OperationOrderError, OperationRunSpec, OperationRunner, OperationTaskError,
-    StatefulOperation,
+    ExecutionPlan, Operation, OperationExecution, OperationExecutionOptions, OperationGraph, OperationId,
+    OperationMeta, OperationOrderError, OperationRunSpec, PreparedOperationRunner, StatefulOperation,
 };
 
 /// Execution and display controls attached to one operation call.
@@ -77,7 +75,7 @@ impl PreparedDeploy {
                 return Err(DeployError::MissingConnector(host.clone()));
             }
         }
-        Ok(PreparedOperationRunner { connectors: connectors.clone(), executions: self.executions.clone() })
+        Ok(PreparedOperationRunner::new(connectors.clone(), self.executions.clone()))
     }
 }
 
@@ -318,36 +316,6 @@ pub enum DeployError {
     InconsistentOperation { id: OperationId },
     #[error("host {0} has no connector")]
     MissingConnector(String),
-}
-
-pub(crate) struct PreparedOperationRunner {
-    pub connectors: IndexMap<String, Arc<dyn Connector>>,
-    pub executions: IndexMap<(String, OperationId), OperationExecution>,
-}
-
-impl OperationRunner for PreparedOperationRunner {
-    fn run<'a>(&'a self, host: &'a str, operation: &'a OperationId) -> OperationFuture<'a> {
-        Box::pin(async move {
-            let connector = self
-                .connectors
-                .get(host)
-                .ok_or_else(|| OperationTaskError { message: format!("host {host} has no connector") })?;
-            let execution = self.executions.get(&(host.to_owned(), operation.clone())).ok_or_else(|| {
-                OperationTaskError { message: format!("host {host} has no prepared operation {}", operation.as_str()) }
-            })?;
-            let result = OperationExecutor.execute(connector.as_ref(), execution).await;
-            if result.return_status {
-                Ok(())
-            } else {
-                Err(OperationTaskError {
-                    message: result.error.map_or_else(
-                        || format!("operation {} failed on {host}", operation.as_str()),
-                        |error| error.to_string(),
-                    ),
-                })
-            }
-        })
-    }
 }
 
 #[cfg(test)]

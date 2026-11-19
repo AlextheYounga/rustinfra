@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::thread;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use thiserror::Error;
 
 use super::{Config, Inventory};
@@ -46,6 +46,7 @@ pub struct State {
     activated_hosts: IndexSet<String>,
     active_hosts: IndexSet<String>,
     failed_hosts: IndexSet<String>,
+    host_results: IndexMap<String, HostResults>,
 }
 
 impl State {
@@ -62,6 +63,7 @@ impl State {
             activated_hosts: IndexSet::new(),
             active_hosts: IndexSet::new(),
             failed_hosts: IndexSet::new(),
+            host_results: IndexMap::new(),
         }
     }
 
@@ -141,6 +143,15 @@ impl State {
     #[must_use]
     pub fn failed_hosts(&self) -> &IndexSet<String> {
         &self.failed_hosts
+    }
+
+    #[must_use]
+    pub fn host_results(&self, host: &str) -> Option<&HostResults> {
+        self.host_results.get(host)
+    }
+
+    pub(crate) fn set_host_results(&mut self, host: String, results: HostResults) {
+        self.host_results.insert(host, results);
     }
 }
 

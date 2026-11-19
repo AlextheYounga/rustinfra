@@ -57,7 +57,11 @@ impl DeployRuntime {
             state.set_stage(StateStage::Prepare)?;
             let runner = Arc::new(deploy.runner(&self.connectors)?);
             state.set_stage(StateStage::Execute)?;
-            Scheduler::new(runner).execute(state, deploy.plan(), strategy).await?;
+            let execution = Scheduler::new(runner.clone()).execute(state, deploy.plan(), strategy).await;
+            for (host, results) in runner.results().await {
+                state.set_host_results(host, results);
+            }
+            execution?;
             Ok(())
         }
         .await;
@@ -171,6 +175,8 @@ mod tests {
         assert_eq!(output, ["one", "two"]);
         assert_eq!(state.stage(), StateStage::Disconnect);
         assert_eq!(state.activated_hosts().len(), 2);
+        assert_eq!(state.host_results("one").map(|results| results.successful_operations), Some(1));
+        assert_eq!(state.host_results("two").map(|results| results.operations), Some(1));
     }
 
     #[tokio::test]

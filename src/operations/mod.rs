@@ -8,6 +8,7 @@ mod command_executor;
 mod deploy;
 pub mod files;
 mod order;
+mod prepared_runner;
 mod retry;
 mod runtime;
 mod scheduler;
@@ -16,6 +17,7 @@ pub mod server;
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
 pub use deploy::{DeployError, DeployHost, OperationOptions, PreparedDeploy, PreparedOperation};
 pub use order::{CycleEdge, OperationGraph, OperationId, OperationMeta, OperationOrderError};
+pub(crate) use prepared_runner::PreparedOperationRunner;
 pub use retry::{
     OperationExecution, OperationExecutionOptions, OperationExecutionResult, OperationExecutor, RetryContext,
     RetryPredicate,
