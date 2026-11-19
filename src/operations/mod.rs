@@ -4,6 +4,7 @@ use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
 
+pub mod apt;
 mod command_executor;
 mod deploy;
 pub mod files;
