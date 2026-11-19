@@ -48,6 +48,7 @@ impl Default for OperationExecutionOptions {
 }
 
 /// A host-specific operation whose commands are regenerated for every attempt.
+#[derive(Clone)]
 pub struct OperationExecution {
     host: String,
     operation: String,
