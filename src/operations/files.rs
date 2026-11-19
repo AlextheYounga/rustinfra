@@ -12,9 +12,11 @@ use super::{StatefulOperation, StatefulOperationFuture};
 mod get;
 mod link;
 mod put;
+mod template;
 pub use get::{Get, GetInput};
 pub use link::{Link, LinkInput};
 pub use put::{Put, PutInput};
+pub use template::{Template, TemplateInput};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FileInput {

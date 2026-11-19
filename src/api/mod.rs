@@ -23,7 +23,9 @@ mod inventory_expansion;
 mod state;
 mod value;
 
-pub use command::{Command, CommandBit, FileDownloadCommand, FileUploadCommand, RsyncCommand, StringCommand};
+pub use command::{
+    Command, CommandBit, ContentUploadCommand, FileDownloadCommand, FileUploadCommand, RsyncCommand, StringCommand,
+};
 pub use config::{Config, ConfigState, DEFAULT_TEMP_DIRECTORY};
 pub use inventory::{
     ConnectorKind, Data, GroupSpec, Host, HostSpec, Inventory, InventoryError, InventorySpec, SSH_HOSTNAME_DATA_KEY,

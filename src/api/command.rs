@@ -125,8 +125,17 @@ impl fmt::Display for StringCommand {
 pub enum Command {
     Shell(StringCommand),
     Upload(FileUploadCommand),
+    UploadContent(ContentUploadCommand),
     Download(FileDownloadCommand),
     Rsync(RsyncCommand),
+}
+
+/// Uploads generated content to a target path.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContentUploadCommand {
+    pub content: Vec<u8>,
+    pub destination: String,
+    pub remote_temporary_filename: Option<String>,
 }
 
 /// Uploads a local file to a target path.

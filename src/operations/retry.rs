@@ -203,6 +203,9 @@ fn command_description(command: &Command) -> String {
     match command {
         Command::Shell(command) => command.masked_value(),
         Command::Upload(command) => format!("FileUploadCommand({}, {})", command.source.display(), command.destination),
+        Command::UploadContent(command) => {
+            format!("ContentUploadCommand({} bytes, {})", command.content.len(), command.destination)
+        }
         Command::Download(command) => {
             format!("FileDownloadCommand({}, {})", command.source, command.destination.display())
         }

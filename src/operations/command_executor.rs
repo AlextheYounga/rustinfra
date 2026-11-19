@@ -1,6 +1,9 @@
-use thiserror::Error;
+use std::io::Error;
 
-use crate::api::Command;
+use thiserror::Error;
+use tokio::fs;
+
+use crate::api::{Command, ContentUploadCommand};
 use crate::connectors::{CommandOutput, Connector, ConnectorError, FileTransferOptions, RunOptions};
 
 /// Failure while executing one command in an operation's ordered command list.
@@ -10,6 +13,8 @@ pub enum CommandExecutionError {
     Generation { message: String },
     #[error(transparent)]
     Connector(#[from] ConnectorError),
+    #[error("could not prepare generated upload content: {0}")]
+    LocalIo(#[from] Error),
     #[error("shell command exited with {exit_code:?}: {stderr}")]
     ShellFailed { exit_code: Option<i32>, stderr: String },
 }
@@ -85,6 +90,7 @@ impl CommandExecutor {
                     )
                     .await
                     .map_err(CommandExecutionError::from),
+                Command::UploadContent(command) => self.upload_content(connector, command, options.run).await,
                 Command::Download(command) => connector
                     .get_file(
                         &command.source,
@@ -113,6 +119,27 @@ impl CommandExecutor {
             }
         }
         attempt
+    }
+
+    async fn upload_content(
+        &self,
+        connector: &dyn Connector,
+        command: &ContentUploadCommand,
+        options: &RunOptions,
+    ) -> Result<(), CommandExecutionError> {
+        let temporary = tempfile::NamedTempFile::new()?;
+        fs::write(temporary.path(), &command.content).await?;
+        connector
+            .put_file(
+                temporary.path(),
+                &command.destination,
+                FileTransferOptions {
+                    run: options,
+                    remote_temporary_filename: command.remote_temporary_filename.as_deref(),
+                },
+            )
+            .await
+            .map_err(CommandExecutionError::from)
     }
 }
 
