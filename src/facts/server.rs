@@ -5,7 +5,9 @@ use crate::api::{CommandBit, StringCommand};
 
 use super::Fact;
 
+mod sysctl;
 mod users;
+pub use sysctl::{Sysctl, SysctlInput, SysctlValue};
 pub use users::{UserInfo, Users};
 
 const TEMP_DIRECTORY_COMMAND: &str = "if [ -n \"$TMPDIR\" ] && [ -d \"$TMPDIR\" ] && [ -w \"$TMPDIR\" ]; then\n    echo \"$TMPDIR\";\nelif [ -n \"$TMP\" ] && [ -d \"$TMP\" ] && [ -w \"$TMP\" ]; then\n    echo \"$TMP\";\nelif [ -n \"$TEMP\" ] && [ -d \"$TEMP\" ] && [ -w \"$TEMP\" ]; then\n    echo \"$TEMP\";\nelse\n    echo \"\";\nfi";

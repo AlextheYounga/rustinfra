@@ -3,8 +3,10 @@ use crate::api::{Command, CommandBit, StringCommand};
 use super::Operation;
 
 mod stateful;
+mod sysctl;
 mod user;
 pub use stateful::{Group, GroupInput, Hostname, HostnameFile, HostnameInput};
+pub use sysctl::{Sysctl, SysctlInput};
 pub use user::{User, UserInput};
 
 /// One or more raw shell commands accepted by `server.shell`.
