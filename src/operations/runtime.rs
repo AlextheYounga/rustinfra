@@ -120,8 +120,9 @@ mod tests {
     use super::{DeployRuntime, Duration};
     use crate::api::{Config, ConnectorKind, Data, HostSpec, Inventory, InventorySpec, State, StateStage};
     use crate::connectors::{Connector, LocalConnector};
+    use crate::operations::files::{File, FileInput};
     use crate::operations::server::{Shell, ShellCommands};
-    use crate::operations::{DeployRuntimeError, ExecutionStrategy, PreparedDeploy};
+    use crate::operations::{DeployRuntimeError, ExecutionStrategy, OperationOptions, PreparedDeploy};
 
     #[test]
     fn runtime_builds_builtin_connectors_and_rejects_unimplemented_external_connectors() {
@@ -170,5 +171,24 @@ mod tests {
         assert_eq!(output, ["one", "two"]);
         assert_eq!(state.stage(), StateStage::Disconnect);
         assert_eq!(state.activated_hosts().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn runtime_executes_stateful_operations_through_the_public_deploy_boundary() {
+        let inventory =
+            Inventory::from_spec(InventorySpec { hosts: vec![HostSpec::local()], ..InventorySpec::default() }).unwrap();
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("stateful-file");
+        let deploy = PreparedDeploy::prepare(&inventory, |host| {
+            host.add_stateful(File, FileInput::new(path.to_string_lossy()), OperationOptions::default())?;
+            Ok(())
+        })
+        .unwrap();
+        let mut state = State::new(inventory.clone(), Config::default());
+        let runtime = DeployRuntime::from_inventory(&inventory, Duration::from_secs(1)).unwrap();
+
+        runtime.execute(&mut state, &deploy, ExecutionStrategy::Lockstep).await.unwrap();
+
+        assert!(path.is_file());
     }
 }

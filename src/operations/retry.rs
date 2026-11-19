@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -52,9 +54,13 @@ impl Default for OperationExecutionOptions {
 pub struct OperationExecution {
     host: String,
     operation: String,
-    generate_commands: Arc<dyn Fn() -> Vec<Command> + Send + Sync>,
+    generate_commands: Arc<CommandGenerator>,
     options: OperationExecutionOptions,
 }
+
+type CommandGenerationFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<Vec<Command>, CommandExecutionError>> + Send + 'a>>;
+type CommandGenerator = dyn for<'a> Fn(&'a dyn Connector) -> CommandGenerationFuture<'a> + Send + Sync;
 
 impl OperationExecution {
     #[must_use]
@@ -62,6 +68,24 @@ impl OperationExecution {
         host: impl Into<String>,
         operation: impl Into<String>,
         generate_commands: impl Fn() -> Vec<Command> + Send + Sync + 'static,
+        options: OperationExecutionOptions,
+    ) -> Self {
+        Self::new_async(
+            host,
+            operation,
+            move |_| {
+                let commands = generate_commands();
+                Box::pin(async move { Ok(commands) })
+            },
+            options,
+        )
+    }
+
+    #[must_use]
+    pub fn new_async(
+        host: impl Into<String>,
+        operation: impl Into<String>,
+        generate_commands: impl for<'a> Fn(&'a dyn Connector) -> CommandGenerationFuture<'a> + Send + Sync + 'static,
         options: OperationExecutionOptions,
     ) -> Self {
         Self { host: host.into(), operation: operation.into(), generate_commands: Arc::new(generate_commands), options }
@@ -104,7 +128,23 @@ impl OperationExecutor {
         let mut retry_attempts = 0;
 
         loop {
-            let commands = (execution.generate_commands)();
+            let commands = match (execution.generate_commands)(connector).await {
+                Ok(commands) => commands,
+                Err(error) => {
+                    return OperationExecutionResult {
+                        success: false,
+                        return_status: execution.options.ignore_errors,
+                        ignored_error: execution.options.ignore_errors,
+                        partial: false,
+                        retry_attempts,
+                        max_retries: execution.options.retries,
+                        executed_commands: 0,
+                        commands: Vec::new(),
+                        output: CommandOutput::default(),
+                        error: Some(error),
+                    };
+                }
+            };
             let attempt = CommandExecutor
                 .execute_attempt(
                     connector,

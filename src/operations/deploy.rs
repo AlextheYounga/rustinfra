@@ -7,11 +7,13 @@ use thiserror::Error;
 
 use crate::api::{Host, Inventory};
 use crate::connectors::Connector;
+use crate::facts::{FactOptions, Phase};
 
 use super::scheduler::OperationFuture;
 use super::{
     ExecutionPlan, Operation, OperationExecution, OperationExecutionOptions, OperationExecutor, OperationGraph,
     OperationId, OperationMeta, OperationOrderError, OperationRunSpec, OperationRunner, OperationTaskError,
+    StatefulOperation,
 };
 
 /// Execution and display controls attached to one operation call.
@@ -176,6 +178,72 @@ impl<'a> DeployHost<'a> {
             self.host.name(),
             operation.name(),
             move || operation.commands(&input),
+            options.execution,
+        );
+        self.builder.executions.insert((self.host.name().to_owned(), id.clone()), execution);
+        if let Some(shared) = self.builder.operations.get_mut(&id) {
+            shared.hosts.insert(self.host.name().to_owned());
+        }
+        self.path.push(id.clone());
+        Ok(id)
+    }
+
+    /// Adds a desired-state operation that gathers fresh facts on every execution attempt.
+    #[track_caller]
+    pub fn add_stateful<O>(
+        &mut self,
+        operation: O,
+        input: O::Input,
+        options: OperationOptions,
+    ) -> Result<OperationId, DeployError>
+    where
+        O: StatefulOperation + 'static,
+        O::Input: 'static,
+    {
+        let location = Location::caller();
+        let location_key = format!("{}:{}:{}", location.file(), location.line(), location.column());
+        let occurrence = self.location_counts.entry(location_key.clone()).or_default();
+        let id = OperationId::new(format!("{location_key}:{occurrence}"));
+        *occurrence += 1;
+
+        let display_name = options.name.clone().unwrap_or_else(|| operation.name().to_owned());
+        let shared = SharedOperation {
+            operation_name: operation.name(),
+            display_name,
+            idempotent: operation.is_idempotent(),
+            serial: options.serial,
+            parallel: options.parallel,
+            hosts: IndexSet::new(),
+        };
+        if options.run_once && self.builder.run_once.contains(&id) {
+            return Ok(id);
+        }
+        self.builder.register(id.clone(), shared)?;
+        if options.run_once {
+            self.builder.run_once.insert(id.clone());
+        }
+
+        let operation = Arc::new(operation);
+        let input = Arc::new(input);
+        let fact_options = FactOptions {
+            run: options.execution.run.clone(),
+            ignore_errors: options.execution.ignore_errors,
+            phase: Phase::Execute,
+        };
+        let execution = OperationExecution::new_async(
+            self.host.name(),
+            operation.name(),
+            move |connector| {
+                let operation = Arc::clone(&operation);
+                let input = Arc::clone(&input);
+                let fact_options = fact_options.clone();
+                Box::pin(async move {
+                    operation
+                        .commands(input.as_ref(), connector, &fact_options)
+                        .await
+                        .map_err(|error| super::CommandExecutionError::Generation { message: error.to_string() })
+                })
+            },
             options.execution,
         );
         self.builder.executions.insert((self.host.name().to_owned(), id.clone()), execution);

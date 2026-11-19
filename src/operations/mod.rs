@@ -1,7 +1,12 @@
 //! Operation metadata, ordering, and execution coordination.
 
+use std::error::Error;
+use std::future::Future;
+use std::pin::Pin;
+
 mod command_executor;
 mod deploy;
+pub mod files;
 mod order;
 mod retry;
 mod runtime;
@@ -21,6 +26,8 @@ pub use scheduler::{
 };
 
 use crate::api::Command;
+use crate::connectors::Connector;
+use crate::facts::FactOptions;
 
 /// A typed desired-state action that produces connector commands.
 pub trait Operation {
@@ -29,4 +36,22 @@ pub trait Operation {
     fn name(&self) -> &'static str;
     fn is_idempotent(&self) -> bool;
     fn commands(&self, input: &Self::Input) -> Vec<Command>;
+}
+
+/// Asynchronous command generation for an operation that reads current host state.
+pub type StatefulOperationFuture<'a> =
+    Pin<Box<dyn Future<Output = Result<Vec<Command>, Box<dyn Error + Send + Sync>>> + Send + 'a>>;
+
+/// A desired-state operation that re-reads facts whenever its commands are generated.
+pub trait StatefulOperation: Send + Sync {
+    type Input: Send + Sync;
+
+    fn name(&self) -> &'static str;
+    fn is_idempotent(&self) -> bool;
+    fn commands<'a>(
+        &'a self,
+        input: &'a Self::Input,
+        connector: &'a dyn Connector,
+        fact_options: &'a FactOptions,
+    ) -> StatefulOperationFuture<'a>;
 }

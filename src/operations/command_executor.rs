@@ -6,6 +6,8 @@ use crate::connectors::{CommandOutput, Connector, ConnectorError, FileTransferOp
 /// Failure while executing one command in an operation's ordered command list.
 #[derive(Debug, Error)]
 pub enum CommandExecutionError {
+    #[error("could not generate operation commands: {message}")]
+    Generation { message: String },
     #[error(transparent)]
     Connector(#[from] ConnectorError),
     #[error("shell command exited with {exit_code:?}: {stderr}")]
