@@ -5,7 +5,7 @@ use tempfile::NamedTempFile;
 use tokio::fs::{self, File};
 use tokio::io::{self, AsyncWriteExt};
 
-use super::{SshConnector, SshConnectorError};
+use super::{FileTransferProtocol, SshConnector, SshConnectorError};
 use crate::api::{CommandBit, StringCommand};
 use crate::connectors::{CommandResult, FileTransferOptions, RunOptions};
 
@@ -82,6 +82,9 @@ impl SshConnector {
     }
 
     async fn upload_once(&self, source: &Path, destination: &str) -> Result<(), SshConnectorError> {
+        if self.options.file_transfer_protocol == FileTransferProtocol::Scp {
+            return self.scp_upload(source, destination).await;
+        }
         let sftp = self.sftp().await?;
         let mut source = File::open(source).await?;
         let mut destination = sftp.create(destination.to_owned()).await?;
@@ -91,6 +94,9 @@ impl SshConnector {
     }
 
     async fn download(&self, source: &str, destination: &Path) -> Result<(), SshConnectorError> {
+        if self.options.file_transfer_protocol == FileTransferProtocol::Scp {
+            return self.scp_download(source, destination).await;
+        }
         let sftp = self.sftp().await?;
         let mut source = sftp.open(source.to_owned()).await?;
         let temporary = NamedTempFile::new()?;

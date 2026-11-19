@@ -13,6 +13,7 @@ use rustinfra::api::{HiddenValue, StringCommand};
 use rustinfra::connectors::{
     Connector, FileTransferOptions, FileTransferProtocol, HostKeyPolicy, RunOptions, SshConnectionOptions, SshConnector,
 };
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, split};
 use tokio::net::TcpListener;
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -62,6 +63,16 @@ impl server::Handler for CommandServer {
         let command = String::from_utf8_lossy(data).into_owned();
         self.commands.lock().map_err(|_| RusshError::Disconnect)?.push(command.clone());
         session.channel_success(channel)?;
+        if command.starts_with("scp -t ") || command.starts_with("scp -f ") {
+            let Some(scp_channel) = self.channels.lock().await.remove(&channel) else {
+                return Err(RusshError::Disconnect);
+            };
+            let files = Arc::clone(&self.files);
+            tokio::spawn(async move {
+                run_scp_server(scp_channel, &command, files).await;
+            });
+            return Ok(());
+        }
         session.data(channel, &b"out\n"[..])?;
         session.extended_data(channel, 1, &b"err\n"[..])?;
         let exit_status = if command.contains("printf") { 7 } else { 0 };
@@ -155,6 +166,62 @@ fn ok_status(id: u32) -> Status {
     Status { id, status_code: StatusCode::Ok, error_message: "Ok".to_owned(), language_tag: "en-US".to_owned() }
 }
 
+async fn run_scp_server(channel: Channel<server::Msg>, command: &str, files: Arc<Mutex<HashMap<String, Vec<u8>>>>) {
+    let stream = channel.into_stream();
+    let (reader, mut writer) = split(stream);
+    let mut reader = BufReader::new(reader);
+    if let Some(path) = command.strip_prefix("scp -t ") {
+        if writer.write_all(&[0]).await.is_err() {
+            return;
+        }
+        let mut header = String::new();
+        if reader.read_line(&mut header).await.is_err() {
+            return;
+        }
+        let size = header.split_whitespace().nth(1).and_then(|value| value.parse::<usize>().ok());
+        let Some(size) = size else {
+            return;
+        };
+        if writer.write_all(&[0]).await.is_err() {
+            return;
+        }
+        let mut content = vec![0; size];
+        if reader.read_exact(&mut content).await.is_err() {
+            return;
+        }
+        let mut terminator = [1];
+        if reader.read_exact(&mut terminator).await.is_err() || terminator != [0] {
+            return;
+        }
+        if let Ok(mut remote_files) = files.lock() {
+            remote_files.insert(path.to_owned(), content);
+        }
+        let _ = writer.write_all(&[0]).await;
+    } else if let Some(path) = command.strip_prefix("scp -f ") {
+        let mut confirmation = [1];
+        if reader.read_exact(&mut confirmation).await.is_err() || confirmation != [0] {
+            return;
+        }
+        let content = files.lock().ok().and_then(|remote_files| remote_files.get(path).cloned());
+        let Some(content) = content else {
+            let _ = writer.write_all(b"\x01missing\n").await;
+            return;
+        };
+        let basename = path.rsplit('/').next().unwrap_or(path);
+        if writer.write_all(format!("C0644 {} {basename}\n", content.len()).as_bytes()).await.is_err() {
+            return;
+        }
+        if reader.read_exact(&mut confirmation).await.is_err() || confirmation != [0] {
+            return;
+        }
+        if writer.write_all(&content).await.is_err() || writer.write_all(&[0]).await.is_err() {
+            return;
+        }
+        let _ = reader.read_exact(&mut confirmation).await;
+    }
+    let _ = writer.shutdown().await;
+}
+
 #[tokio::test]
 async fn persistent_session_runs_commands_on_independent_channels() {
     let commands = Arc::new(Mutex::new(Vec::new()));
@@ -242,6 +309,35 @@ async fn persistent_session_runs_commands_on_independent_channels() {
     }
 
     connector.disconnect().await.unwrap();
+
+    let scp_connector = SshConnector::new(SshConnectionOptions {
+        hostname: "127.0.0.1".to_owned(),
+        port,
+        user: "deploy".to_owned(),
+        password: Some(HiddenValue::new("secret")),
+        key: None,
+        key_password: None,
+        allow_agent: false,
+        look_for_keys: false,
+        known_hosts_file: None,
+        host_key_policy: HostKeyPolicy::Accept,
+        connect_timeout: Duration::from_secs(2),
+        connect_retries: 0,
+        connect_retry_min_delay: Duration::ZERO,
+        connect_retry_max_delay: Duration::ZERO,
+        file_transfer_protocol: FileTransferProtocol::Scp,
+    });
+    scp_connector.connect().await.unwrap();
+    scp_connector.put_file(&upload, "/scp-remote", transfer).await.unwrap();
+    let scp_download = local.path().join("scp-download");
+    scp_connector.get_file("/scp-remote", &scp_download, transfer).await.unwrap();
+    assert_eq!(fs::read(scp_download).unwrap(), b"transferred");
+    let preserved = local.path().join("scp-preserved");
+    fs::write(&preserved, b"preserved").unwrap();
+    assert!(scp_connector.get_file("/scp-missing", &preserved, transfer).await.is_err());
+    assert_eq!(fs::read(preserved).unwrap(), b"preserved");
+    scp_connector.disconnect().await.unwrap();
+
     server_task.abort();
     assert!(server_task.await.unwrap_err().is_cancelled());
 }

@@ -12,7 +12,7 @@ use russh::keys::{
     Error as KeyError, PrivateKeyWithHashAlg, PublicKeyOrCertificate, check_known_hosts, load_openssh_certificate,
     load_secret_key,
 };
-use russh::{ChannelMsg, Disconnect};
+use russh::{Channel, ChannelMsg, Disconnect};
 use russh_sftp::client::SftpSession;
 use russh_sftp::client::error::Error as SftpError;
 use thiserror::Error;
@@ -51,8 +51,8 @@ pub enum SshConnectorError {
     TransferIo(#[from] IoError),
     #[error("SSH file transfer command failed during {action}: {stderr}")]
     TransferCommand { action: &'static str, stderr: String },
-    #[error("SCP file transfers are not implemented yet")]
-    ScpNotImplemented,
+    #[error("SCP transfer failed: {0}")]
+    Scp(String),
     #[error("SSH command requested before connecting")]
     NotConnected,
     #[error("SSH command timed out after {0:?}")]
@@ -143,9 +143,6 @@ impl SshConnector {
     }
 
     pub(super) async fn sftp(&self) -> Result<Arc<SftpSession>, SshConnectorError> {
-        if self.options.file_transfer_protocol == super::FileTransferProtocol::Scp {
-            return Err(SshConnectorError::ScpNotImplemented);
-        }
         if let Some(sftp) = self.sftp.read().await.clone() {
             return Ok(sftp);
         }
@@ -160,6 +157,11 @@ impl SshConnector {
         let sftp = Arc::new(SftpSession::new(channel.into_stream()).await?);
         *current = Some(Arc::clone(&sftp));
         Ok(sftp)
+    }
+
+    pub(super) async fn open_channel(&self) -> Result<Channel<client::Msg>, SshConnectorError> {
+        let session = self.session.read().await.clone().ok_or(SshConnectorError::NotConnected)?;
+        Ok(session.channel_open_session().await?)
     }
 }
 

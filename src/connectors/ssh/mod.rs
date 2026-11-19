@@ -1,5 +1,6 @@
 mod options;
 mod output;
+mod scp;
 mod session;
 mod transfer;
 
