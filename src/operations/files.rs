@@ -10,10 +10,12 @@ use crate::facts::{FactExecutor, FactOptions};
 use super::{StatefulOperation, StatefulOperationFuture};
 
 mod get;
+mod line;
 mod link;
 mod put;
 mod template;
 pub use get::{Get, GetInput};
+pub use line::{Line, LineBackup, LineInput};
 pub use link::{Link, LinkInput};
 pub use put::{Put, PutInput};
 pub use template::{Template, TemplateInput};

@@ -4,6 +4,9 @@ use crate::api::{CommandBit, StringCommand, USER_HOME_PATH_PREFIX};
 
 use super::Fact;
 
+mod find;
+pub use find::{FindInFile, FindInFileInput};
+
 const LINUX_STAT_COMMAND: &str = "stat -c 'user=%U group=%G mode=%A atime=%X mtime=%Y ctime=%Z size=%s %N'";
 const BSD_STAT_COMMAND: &str = "stat -f 'user=%Su group=%Sg mode=%Sp atime=%a mtime=%m ctime=%c size=%z %N%SY'";
 
