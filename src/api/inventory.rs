@@ -93,6 +93,12 @@ pub enum InventoryError {
     NoGroup(String),
     #[error("Cannot have more than one @local")]
     MultipleLocalHosts,
+    #[error("Invalid connector: {0}")]
+    InvalidConnector(String),
+    #[error("Invalid connector: {connector} (it cannot execute commands, it only provides names)")]
+    ConnectorCannotExecute { connector: String },
+    #[error("connector {connector} could not expand inventory name: {message}")]
+    ConnectorExpansion { connector: String, message: String },
 }
 
 /// Ordered target hosts, groups, and their layered data.
@@ -134,6 +140,37 @@ impl Inventory {
             }
             extend_data(inventory.host_data.entry(host_spec.name.clone()).or_default(), host_spec.data);
             let groups = host_groups.get(&host_spec.name).cloned().unwrap_or_default();
+            let host = Host { name: host_spec.name.clone(), groups: groups.clone(), connector: host_spec.connector };
+            inventory.hosts.insert(host_spec.name.clone(), host);
+            for group in groups {
+                let members = inventory.groups.entry(group).or_default();
+                if !members.contains(&host_spec.name) {
+                    members.push(host_spec.name.clone());
+                }
+            }
+        }
+
+        Ok(inventory)
+    }
+
+    pub(super) fn from_expanded(
+        hosts: Vec<(HostSpec, Vec<String>)>,
+        data: Data,
+        override_data: Data,
+        group_data: IndexMap<String, Data>,
+    ) -> Result<Self, InventoryError> {
+        let mut inventory = Self { data, override_data, group_data, ..Self::default() };
+        let mut local_seen = false;
+
+        for (host_spec, groups) in hosts {
+            if host_spec.connector == ConnectorKind::Local {
+                if local_seen {
+                    return Err(InventoryError::MultipleLocalHosts);
+                }
+                local_seen = true;
+            }
+
+            inventory.host_data.insert(host_spec.name.clone(), host_spec.data);
             let host = Host { name: host_spec.name.clone(), groups: groups.clone(), connector: host_spec.connector };
             inventory.hosts.insert(host_spec.name.clone(), host);
             for group in groups {
