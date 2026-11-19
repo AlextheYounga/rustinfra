@@ -42,5 +42,5 @@ Run the included example with:
 cargo run --example local_deploy
 ```
 
-The translation is in progress. See `CONTEXT.md` and `AGENTS.md` for compatibility requirements and
-the current architecture rules.
+The translation is in progress. See `PARITY.md` for implemented capabilities and remaining work,
+and `CONTEXT.md` and `AGENTS.md` for compatibility requirements and architecture rules.
