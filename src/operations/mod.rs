@@ -2,11 +2,16 @@
 
 mod command_executor;
 mod order;
+mod retry;
 mod scheduler;
 pub mod server;
 
-pub use command_executor::{CommandExecutionError, CommandExecutor};
+pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
 pub use order::{CycleEdge, OperationGraph, OperationId, OperationMeta, OperationOrderError};
+pub use retry::{
+    OperationExecution, OperationExecutionOptions, OperationExecutionResult, OperationExecutor, RetryContext,
+    RetryPredicate,
+};
 pub use scheduler::{
     ExecutionPlan, ExecutionStrategy, OperationRunSpec, OperationRunner, OperationTaskError, Scheduler, SchedulerError,
 };

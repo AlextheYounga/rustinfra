@@ -12,6 +12,21 @@ pub enum CommandExecutionError {
     ShellFailed { exit_code: Option<i32>, stderr: String },
 }
 
+/// Result of one pass through an operation's generated commands.
+#[derive(Debug)]
+pub struct CommandAttempt {
+    pub did_error: bool,
+    pub executed_commands: usize,
+    pub output: CommandOutput,
+    pub error: Option<CommandExecutionError>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct AttemptOptions<'a> {
+    pub run: &'a RunOptions,
+    pub continue_on_error: bool,
+}
+
 /// Executes each command yielded by one operation in order.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CommandExecutor;
@@ -23,31 +38,65 @@ impl CommandExecutor {
         commands: &[Command],
         options: &RunOptions,
     ) -> Result<CommandOutput, CommandExecutionError> {
-        let mut output = CommandOutput::default();
+        let attempt =
+            self.execute_attempt(connector, commands, AttemptOptions { run: options, continue_on_error: false }).await;
+        match attempt.error {
+            Some(error) => Err(error),
+            None => Ok(attempt.output),
+        }
+    }
+
+    /// Executes one attempt, optionally continuing after failed commands.
+    pub(crate) async fn execute_attempt(
+        &self,
+        connector: &dyn Connector,
+        commands: &[Command],
+        options: AttemptOptions<'_>,
+    ) -> CommandAttempt {
+        let mut attempt =
+            CommandAttempt { did_error: false, executed_commands: 0, output: CommandOutput::default(), error: None };
         for command in commands {
-            match command {
-                Command::Shell(command) => {
-                    let result = connector.run_shell_command(command.clone(), options).await?;
-                    let success = result.success;
-                    let exit_code = result.exit_code;
-                    let stderr = result.output.stderr();
-                    output.extend(result.output);
-                    if !success {
-                        return Err(CommandExecutionError::ShellFailed { exit_code, stderr });
+            let result = match command {
+                Command::Shell(command) => match connector.run_shell_command(command.clone(), options.run).await {
+                    Ok(result) if result.success => {
+                        attempt.output.extend(result.output);
+                        Ok(())
                     }
-                }
-                Command::Upload(command) => {
-                    connector.put_file(&command.source, &command.destination, options).await?;
-                }
-                Command::Download(command) => {
-                    connector.get_file(&command.source, &command.destination, options).await?;
-                }
+                    Ok(result) => {
+                        let error = CommandExecutionError::ShellFailed {
+                            exit_code: result.exit_code,
+                            stderr: result.output.stderr(),
+                        };
+                        attempt.output.extend(result.output);
+                        Err(error)
+                    }
+                    Err(error) => Err(error.into()),
+                },
+                Command::Upload(command) => connector
+                    .put_file(&command.source, &command.destination, options.run)
+                    .await
+                    .map_err(CommandExecutionError::from),
+                Command::Download(command) => connector
+                    .get_file(&command.source, &command.destination, options.run)
+                    .await
+                    .map_err(CommandExecutionError::from),
                 Command::Rsync(command) => {
-                    connector.rsync(command, options).await?;
+                    connector.rsync(command, options.run).await.map_err(CommandExecutionError::from)
+                }
+            };
+
+            match result {
+                Ok(()) => attempt.executed_commands += 1,
+                Err(error) => {
+                    attempt.did_error = true;
+                    attempt.error = Some(error);
+                    if !options.continue_on_error {
+                        break;
+                    }
                 }
             }
         }
-        Ok(output)
+        attempt
     }
 }
 
