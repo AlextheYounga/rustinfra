@@ -5,6 +5,9 @@ use crate::api::{CommandBit, StringCommand};
 
 use super::Fact;
 
+mod users;
+pub use users::{UserInfo, Users};
+
 const TEMP_DIRECTORY_COMMAND: &str = "if [ -n \"$TMPDIR\" ] && [ -d \"$TMPDIR\" ] && [ -w \"$TMPDIR\" ]; then\n    echo \"$TMPDIR\";\nelif [ -n \"$TMP\" ] && [ -d \"$TMP\" ] && [ -w \"$TMP\" ]; then\n    echo \"$TMP\";\nelif [ -n \"$TEMP\" ] && [ -d \"$TEMP\" ] && [ -w \"$TEMP\" ]; then\n    echo \"$TEMP\";\nelse\n    echo \"\";\nfi";
 
 macro_rules! string_fact {
@@ -48,6 +51,10 @@ string_fact!(KernelVersion, "server.KernelVersion", "uname -r");
 string_fact!(Os, "server.Os", "uname -s");
 string_fact!(OsVersion, "server.OsVersion", "uname -r");
 string_fact!(Timezone, "server.Timezone", "readlink -f /etc/localtime | sed 's|.*/zoneinfo/||'");
+
+pub(crate) fn is_bsd(os: Option<&str>) -> bool {
+    os.is_some_and(|name| name.contains("BSD"))
+}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HomeInput(String);

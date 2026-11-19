@@ -1,7 +1,7 @@
 use crate::api::{Command, CommandBit, StringCommand};
 use crate::connectors::Connector;
 use crate::facts::files::{FileContents, PathInput};
-use crate::facts::server::{Groups, Hostname as HostnameFact, Os, Which};
+use crate::facts::server::{Groups, Hostname as HostnameFact, Os, Which, is_bsd};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
@@ -147,7 +147,7 @@ fn group_commands(input: &GroupInput, groups: &[String], os: Option<&str>) -> Ve
     }
 
     let mut bits = if freebsd { vec![raw("pw"), raw("groupadd")] } else { vec![raw("groupadd")] };
-    if input.system && !os.is_some_and(|os| os.contains("BSD")) {
+    if input.system && !is_bsd(os) {
         bits.push(raw("-r"));
     }
     if freebsd {
