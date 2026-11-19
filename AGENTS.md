@@ -124,6 +124,9 @@ avoid a small amount of straightforward code.
 
 ## Reference and Testing
 
+This is a required source-first workflow. Do not design or implement the Rust behavior until the
+corresponding pyinfra source and focused behavioral tests or fixtures have been inspected.
+
 For each translated feature:
 
 1. Locate the corresponding pyinfra implementation.
