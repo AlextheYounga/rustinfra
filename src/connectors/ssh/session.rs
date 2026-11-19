@@ -1,4 +1,5 @@
 use std::env;
+use std::io::Error as IoError;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -12,6 +13,8 @@ use russh::keys::{
     load_secret_key,
 };
 use russh::{ChannelMsg, Disconnect};
+use russh_sftp::client::SftpSession;
+use russh_sftp::client::error::Error as SftpError;
 use thiserror::Error;
 use tokio::sync::RwLock;
 use tokio::time;
@@ -21,8 +24,8 @@ use crate::api::{HiddenValue, RsyncCommand, StringCommand};
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
 use crate::connectors::{
-    CommandOutput, CommandResult, Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture, OutputStream,
-    RunOptions, make_unix_command,
+    CommandOutput, CommandResult, Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture,
+    FileTransferOptions, OutputStream, RunOptions, make_unix_command,
 };
 
 type SshHandle = client::Handle<ServerKeyHandler>;
@@ -42,6 +45,14 @@ pub enum SshConnectorError {
     Authentication { user: String, host: String },
     #[error("SSH agent authentication failed: {0}")]
     Agent(String),
+    #[error("SFTP error: {0}")]
+    Sftp(#[from] SftpError),
+    #[error("SSH transfer I/O error: {0}")]
+    TransferIo(#[from] IoError),
+    #[error("SSH file transfer command failed during {action}: {stderr}")]
+    TransferCommand { action: &'static str, stderr: String },
+    #[error("SCP file transfers are not implemented yet")]
+    ScpNotImplemented,
     #[error("SSH command requested before connecting")]
     NotConnected,
     #[error("SSH command timed out after {0:?}")]
@@ -52,14 +63,15 @@ pub enum SshConnectorError {
 
 /// Persistent SSH connection that opens an independent channel for each command.
 pub struct SshConnector {
-    options: SshConnectionOptions,
+    pub(super) options: SshConnectionOptions,
     session: RwLock<Option<Arc<SshHandle>>>,
+    sftp: RwLock<Option<Arc<SftpSession>>>,
 }
 
 impl SshConnector {
     #[must_use]
     pub fn new(options: SshConnectionOptions) -> Self {
-        Self { options, session: RwLock::new(None) }
+        Self { options, session: RwLock::new(None), sftp: RwLock::new(None) }
     }
 
     async fn connect_session(&self) -> Result<SshHandle, SshConnectorError> {
@@ -112,7 +124,11 @@ impl SshConnector {
         Ok(session.authenticate_none(&self.options.user).await?.success())
     }
 
-    async fn run(&self, command: StringCommand, options: &RunOptions) -> Result<CommandResult, SshConnectorError> {
+    pub(super) async fn run(
+        &self,
+        command: StringCommand,
+        options: &RunOptions,
+    ) -> Result<CommandResult, SshConnectorError> {
         let session = self.session.read().await.clone().ok_or(SshConnectorError::NotConnected)?;
         let unix_command = make_unix_command(command, &options.unix);
         let execution = execute_channel(&session, unix_command.raw_value(), options);
@@ -124,6 +140,26 @@ impl SshConnector {
         };
         let success = exit_code.is_some_and(|code| options.success_exit_codes.contains(&code));
         Ok(CommandResult { success, exit_code, output })
+    }
+
+    pub(super) async fn sftp(&self) -> Result<Arc<SftpSession>, SshConnectorError> {
+        if self.options.file_transfer_protocol == super::FileTransferProtocol::Scp {
+            return Err(SshConnectorError::ScpNotImplemented);
+        }
+        if let Some(sftp) = self.sftp.read().await.clone() {
+            return Ok(sftp);
+        }
+
+        let mut current = self.sftp.write().await;
+        if let Some(sftp) = current.clone() {
+            return Ok(sftp);
+        }
+        let session = self.session.read().await.clone().ok_or(SshConnectorError::NotConnected)?;
+        let channel = session.channel_open_session().await?;
+        channel.request_subsystem(true, "sftp").await?;
+        let sftp = Arc::new(SftpSession::new(channel.into_stream()).await?);
+        *current = Some(Arc::clone(&sftp));
+        Ok(sftp)
     }
 }
 
@@ -154,6 +190,9 @@ impl Connector for SshConnector {
 
     fn disconnect(&self) -> ConnectorTransferFuture<'_> {
         Box::pin(async move {
+            if let Some(sftp) = self.sftp.write().await.take() {
+                sftp.close().await.map_err(SshConnectorError::from)?;
+            }
             if let Some(session) = self.session.write().await.take() {
                 session.disconnect(Disconnect::ByApplication, "", "English").await.map_err(SshConnectorError::from)?;
             }
@@ -167,20 +206,20 @@ impl Connector for SshConnector {
 
     fn put_file<'a>(
         &'a self,
-        _source: &'a Path,
-        _destination: &'a str,
-        _options: &'a RunOptions,
+        source: &'a Path,
+        destination: &'a str,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a> {
-        Box::pin(async { Err(SshConnectorError::TransferNotImplemented.into()) })
+        Box::pin(async move { self.put(source, destination, options).await.map_err(ConnectorError::from) })
     }
 
     fn get_file<'a>(
         &'a self,
-        _source: &'a str,
-        _destination: &'a Path,
-        _options: &'a RunOptions,
+        source: &'a str,
+        destination: &'a Path,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a> {
-        Box::pin(async { Err(SshConnectorError::TransferNotImplemented.into()) })
+        Box::pin(async move { self.get(source, destination, options).await.map_err(ConnectorError::from) })
     }
 
     fn rsync<'a>(&'a self, _command: &'a RsyncCommand, _options: &'a RunOptions) -> ConnectorTransferFuture<'a> {
@@ -347,37 +386,4 @@ impl ServerKeyHandler {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::fs;
-
-    use russh::client::Handler;
-    use russh::keys::{Algorithm, PrivateKey, PublicKeyOrCertificate};
-    use tempfile::tempdir;
-
-    use super::{HandlerError, HostKeyPolicy, ServerKeyHandler};
-
-    #[tokio::test]
-    async fn accept_new_records_unknown_keys_but_rejects_changed_keys() {
-        let directory = tempdir().unwrap();
-        let known_hosts = directory.path().join("known_hosts");
-        let first = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
-        let changed = PrivateKey::random(&mut rand::rng(), Algorithm::Ed25519).unwrap();
-        let mut handler = ServerKeyHandler {
-            hostname: "host.example".to_owned(),
-            port: 22,
-            known_hosts_file: Some(known_hosts.clone()),
-            policy: HostKeyPolicy::AcceptNew,
-        };
-
-        let accepted =
-            handler.check_server_key(&PublicKeyOrCertificate::from(first.public_key().clone())).await.unwrap();
-
-        assert!(accepted);
-        assert!(handler.check_known_host(first.public_key()).unwrap());
-        let known_hosts_before_change = fs::read_to_string(&known_hosts).unwrap();
-        let error =
-            handler.check_server_key(&PublicKeyOrCertificate::from(changed.public_key().clone())).await.unwrap_err();
-        assert!(matches!(error, HandlerError::HostKey(_)));
-        assert_eq!(fs::read_to_string(known_hosts).unwrap(), known_hosts_before_change);
-    }
-}
+mod tests;

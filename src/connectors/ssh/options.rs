@@ -17,6 +17,12 @@ pub enum HostKeyPolicy {
     AcceptNew,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum FileTransferProtocol {
+    Sftp,
+    Scp,
+}
+
 /// Typed SSH connector data after inventory precedence has been applied.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SshConnectionOptions {
@@ -34,6 +40,7 @@ pub struct SshConnectionOptions {
     pub connect_retries: usize,
     pub connect_retry_min_delay: Duration,
     pub connect_retry_max_delay: Duration,
+    pub file_transfer_protocol: FileTransferProtocol,
 }
 
 #[derive(Clone, Debug, Error, PartialEq)]
@@ -46,6 +53,8 @@ pub enum SshOptionsError {
     InvalidHostKeyPolicy(String),
     #[error("invalid SSH retry delay range: minimum {minimum} exceeds maximum {maximum}")]
     InvalidRetryDelayRange { minimum: f64, maximum: f64 },
+    #[error("unsupported SSH file transfer protocol: {0}")]
+    InvalidFileTransferProtocol(String),
     #[error("no SSH user configured and USER is not set")]
     MissingUser,
 }
@@ -75,6 +84,11 @@ impl SshConnectionOptions {
         }
         let retry_min = duration_from_seconds("ssh_connect_retry_min_delay", retry_min)?;
         let retry_max = duration_from_seconds("ssh_connect_retry_max_delay", retry_max)?;
+        let file_transfer_protocol = match optional_string(data, "ssh_file_transfer_protocol")?.unwrap_or("sftp") {
+            "sftp" => FileTransferProtocol::Sftp,
+            "scp" => FileTransferProtocol::Scp,
+            value => return Err(SshOptionsError::InvalidFileTransferProtocol(value.to_owned())),
+        };
 
         Ok(Self {
             hostname,
@@ -98,6 +112,7 @@ impl SshConnectionOptions {
             )?,
             connect_retry_min_delay: retry_min,
             connect_retry_max_delay: retry_max,
+            file_transfer_protocol,
         })
     }
 }

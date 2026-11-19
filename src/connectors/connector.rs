@@ -12,6 +12,12 @@ use super::{CommandResult, LocalConnector, LocalConnectorError, RunOptions, SshC
 pub type ConnectorFuture<'a> = Pin<Box<dyn Future<Output = Result<CommandResult, ConnectorError>> + Send + 'a>>;
 pub type ConnectorTransferFuture<'a> = Pin<Box<dyn Future<Output = Result<(), ConnectorError>> + Send + 'a>>;
 
+#[derive(Clone, Copy)]
+pub struct FileTransferOptions<'a> {
+    pub run: &'a RunOptions,
+    pub remote_temporary_filename: Option<&'a str>,
+}
+
 /// Common execution failure reported by a connector.
 #[derive(Debug, Error)]
 pub enum ConnectorError {
@@ -32,13 +38,13 @@ pub trait Connector: Send + Sync {
         &'a self,
         source: &'a Path,
         destination: &'a str,
-        options: &'a RunOptions,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a>;
     fn get_file<'a>(
         &'a self,
         source: &'a str,
         destination: &'a Path,
-        options: &'a RunOptions,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a>;
     fn rsync<'a>(&'a self, command: &'a RsyncCommand, options: &'a RunOptions) -> ConnectorTransferFuture<'a>;
 }
@@ -60,18 +66,18 @@ impl Connector for LocalConnector {
         &'a self,
         source: &'a Path,
         destination: &'a str,
-        options: &'a RunOptions,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a> {
-        Box::pin(async move { self.put_file(source, destination, options).await.map_err(ConnectorError::from) })
+        Box::pin(async move { self.put_file(source, destination, options.run).await.map_err(ConnectorError::from) })
     }
 
     fn get_file<'a>(
         &'a self,
         source: &'a str,
         destination: &'a Path,
-        options: &'a RunOptions,
+        options: FileTransferOptions<'a>,
     ) -> ConnectorTransferFuture<'a> {
-        Box::pin(async move { self.get_file(source, destination, options).await.map_err(ConnectorError::from) })
+        Box::pin(async move { self.get_file(source, destination, options.run).await.map_err(ConnectorError::from) })
     }
 
     fn rsync<'a>(&'a self, command: &'a RsyncCommand, options: &'a RunOptions) -> ConnectorTransferFuture<'a> {

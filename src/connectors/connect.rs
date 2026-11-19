@@ -142,7 +142,8 @@ mod tests {
     use super::ConnectionManager;
     use crate::api::{Config, HostSpec, Inventory, InventorySpec, RsyncCommand, State, StringCommand};
     use crate::connectors::{
-        Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture, LocalConnector, RunOptions,
+        Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture, FileTransferOptions, LocalConnector,
+        RunOptions,
     };
 
     struct FailingConnector;
@@ -166,22 +167,18 @@ mod tests {
             &'a self,
             source: &'a Path,
             destination: &'a str,
-            options: &'a RunOptions,
+            options: FileTransferOptions<'a>,
         ) -> ConnectorTransferFuture<'a> {
-            Box::pin(async move {
-                LocalConnector.put_file(source, destination, options).await.map_err(ConnectorError::from)
-            })
+            Box::pin(async move { Connector::put_file(&LocalConnector, source, destination, options).await })
         }
 
         fn get_file<'a>(
             &'a self,
             source: &'a str,
             destination: &'a Path,
-            options: &'a RunOptions,
+            options: FileTransferOptions<'a>,
         ) -> ConnectorTransferFuture<'a> {
-            Box::pin(async move {
-                LocalConnector.get_file(source, destination, options).await.map_err(ConnectorError::from)
-            })
+            Box::pin(async move { Connector::get_file(&LocalConnector, source, destination, options).await })
         }
 
         fn rsync<'a>(&'a self, command: &'a RsyncCommand, options: &'a RunOptions) -> ConnectorTransferFuture<'a> {
@@ -215,22 +212,18 @@ mod tests {
             &'a self,
             source: &'a Path,
             destination: &'a str,
-            options: &'a RunOptions,
+            options: FileTransferOptions<'a>,
         ) -> ConnectorTransferFuture<'a> {
-            Box::pin(async move {
-                LocalConnector.put_file(source, destination, options).await.map_err(ConnectorError::from)
-            })
+            Box::pin(async move { Connector::put_file(&LocalConnector, source, destination, options).await })
         }
 
         fn get_file<'a>(
             &'a self,
             source: &'a str,
             destination: &'a Path,
-            options: &'a RunOptions,
+            options: FileTransferOptions<'a>,
         ) -> ConnectorTransferFuture<'a> {
-            Box::pin(async move {
-                LocalConnector.get_file(source, destination, options).await.map_err(ConnectorError::from)
-            })
+            Box::pin(async move { Connector::get_file(&LocalConnector, source, destination, options).await })
         }
 
         fn rsync<'a>(&'a self, command: &'a RsyncCommand, options: &'a RunOptions) -> ConnectorTransferFuture<'a> {

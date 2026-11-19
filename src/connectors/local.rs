@@ -10,7 +10,7 @@ use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::time;
 use tokio::{fs, task};
 
-use crate::api::{CommandBit, RsyncCommand, StringCommand};
+use crate::api::{CommandBit, DEFAULT_TEMP_DIRECTORY, RsyncCommand, StringCommand};
 
 use super::{CommandOutput, OutputStream, UnixCommandOptions, make_unix_command};
 
@@ -22,6 +22,7 @@ pub struct RunOptions {
     pub timeout: Option<Duration>,
     pub stdin: Vec<String>,
     pub get_pty: bool,
+    pub remote_temp_directory: String,
 }
 
 impl Default for RunOptions {
@@ -32,6 +33,7 @@ impl Default for RunOptions {
             timeout: None,
             stdin: Vec::new(),
             get_pty: false,
+            remote_temp_directory: DEFAULT_TEMP_DIRECTORY.to_owned(),
         }
     }
 }

@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 
 use super::{EnvValue, HiddenValue};
 
-const DEFAULT_TEMP_DIRECTORY: &str = "/tmp";
+pub const DEFAULT_TEMP_DIRECTORY: &str = "/tmp";
 const DEFAULT_SHELL: &str = "sh";
 
 /// Deploy-wide defaults corresponding to pyinfra's `Config`.

@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use crate::api::Command;
-use crate::connectors::{CommandOutput, Connector, ConnectorError, RunOptions};
+use crate::connectors::{CommandOutput, Connector, ConnectorError, FileTransferOptions, RunOptions};
 
 /// Failure while executing one command in an operation's ordered command list.
 #[derive(Debug, Error)]
@@ -73,11 +73,25 @@ impl CommandExecutor {
                     Err(error) => Err(error.into()),
                 },
                 Command::Upload(command) => connector
-                    .put_file(&command.source, &command.destination, options.run)
+                    .put_file(
+                        &command.source,
+                        &command.destination,
+                        FileTransferOptions {
+                            run: options.run,
+                            remote_temporary_filename: command.remote_temporary_filename.as_deref(),
+                        },
+                    )
                     .await
                     .map_err(CommandExecutionError::from),
                 Command::Download(command) => connector
-                    .get_file(&command.source, &command.destination, options.run)
+                    .get_file(
+                        &command.source,
+                        &command.destination,
+                        FileTransferOptions {
+                            run: options.run,
+                            remote_temporary_filename: command.remote_temporary_filename.as_deref(),
+                        },
+                    )
                     .await
                     .map_err(CommandExecutionError::from),
                 Command::Rsync(command) => {
