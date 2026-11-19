@@ -5,5 +5,6 @@ mod executor;
 pub mod files;
 pub mod rpm;
 pub mod server;
+pub mod systemd;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};

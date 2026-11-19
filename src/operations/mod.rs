@@ -15,6 +15,7 @@ mod retry;
 mod runtime;
 mod scheduler;
 pub mod server;
+pub mod systemd;
 
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
 pub use deploy::{DeployError, DeployHost, OperationOptions, PreparedDeploy, PreparedOperation};
