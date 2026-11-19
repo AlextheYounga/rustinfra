@@ -9,7 +9,9 @@ mod value;
 
 pub use command::{Command, CommandBit, FileDownloadCommand, FileUploadCommand, RsyncCommand, StringCommand};
 pub use config::{Config, ConfigState};
-pub use inventory::{ConnectorKind, Data, GroupSpec, Host, HostSpec, Inventory, InventoryError, InventorySpec};
+pub use inventory::{
+    ConnectorKind, Data, GroupSpec, Host, HostSpec, Inventory, InventoryError, InventorySpec, SSH_HOSTNAME_DATA_KEY,
+};
 pub use inventory_expansion::{
     ConnectorRegistry, ExpandedHost, InventoryConnector, RawGroupSpec, RawHostSpec, RawInventorySpec,
 };

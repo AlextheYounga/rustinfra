@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use indexmap::IndexMap;
 
-use super::{ConnectorKind, Data, HostSpec, Inventory, InventoryError};
+use super::{ConnectorKind, Data, HostSpec, Inventory, InventoryError, SSH_HOSTNAME_DATA_KEY};
 
 /// An inventory host before connector-name expansion.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -192,7 +192,7 @@ impl InventoryConnector for SshInventoryConnector {
     fn expand(&self, argument: Option<&str>) -> Result<Vec<ExpandedHost>, String> {
         let hostname = argument.ok_or_else(|| "@ssh requires a hostname".to_owned())?;
         let mut data = Data::new();
-        data.insert("ssh_hostname".to_owned(), hostname.into());
+        data.insert(SSH_HOSTNAME_DATA_KEY.to_owned(), hostname.into());
         Ok(vec![ExpandedHost { name: format!("@ssh/{hostname}"), data, groups: Vec::new() }])
     }
 }

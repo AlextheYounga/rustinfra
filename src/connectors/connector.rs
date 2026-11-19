@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::api::{RsyncCommand, StringCommand};
 
-use super::{CommandResult, LocalConnector, LocalConnectorError, RunOptions};
+use super::{CommandResult, LocalConnector, LocalConnectorError, RunOptions, SshConnectorError};
 
 /// A boxed connector call, allowing connectors to be selected at runtime.
 pub type ConnectorFuture<'a> = Pin<Box<dyn Future<Output = Result<CommandResult, ConnectorError>> + Send + 'a>>;
@@ -19,6 +19,8 @@ pub enum ConnectorError {
     Local(#[from] LocalConnectorError),
     #[error("connection failed: {message}")]
     Connection { message: String },
+    #[error(transparent)]
+    Ssh(#[from] SshConnectorError),
 }
 
 /// Executes prepared shell commands against one target.

@@ -21,11 +21,18 @@ pub struct RunOptions {
     pub success_exit_codes: Vec<i32>,
     pub timeout: Option<Duration>,
     pub stdin: Vec<String>,
+    pub get_pty: bool,
 }
 
 impl Default for RunOptions {
     fn default() -> Self {
-        Self { unix: UnixCommandOptions::default(), success_exit_codes: vec![0], timeout: None, stdin: Vec::new() }
+        Self {
+            unix: UnixCommandOptions::default(),
+            success_exit_codes: vec![0],
+            timeout: None,
+            stdin: Vec::new(),
+            get_pty: false,
+        }
     }
 }
 

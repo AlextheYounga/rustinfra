@@ -5,6 +5,9 @@ use thiserror::Error;
 /// Arbitrary inventory data at the external configuration boundary.
 pub type Data = IndexMap<String, Value>;
 
+/// Inventory data key used to override the network target for an SSH host.
+pub const SSH_HOSTNAME_DATA_KEY: &str = "ssh_hostname";
+
 /// Connector selected for an expanded inventory host.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ConnectorKind {
