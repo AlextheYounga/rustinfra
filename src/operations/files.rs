@@ -9,8 +9,10 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+mod get;
 mod link;
 mod put;
+pub use get::{Get, GetInput};
 pub use link::{Link, LinkInput};
 pub use put::{Put, PutInput};
 
