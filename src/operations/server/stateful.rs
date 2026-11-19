@@ -1,7 +1,7 @@
 use crate::api::{Command, CommandBit, StringCommand};
 use crate::connectors::Connector;
 use crate::facts::files::{FileContents, PathInput};
-use crate::facts::server::{Hostname as HostnameFact, Os, Which};
+use crate::facts::server::{Groups, Hostname as HostnameFact, Os, Which};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
@@ -88,6 +88,79 @@ impl StatefulOperation for Hostname {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GroupInput {
+    pub group: String,
+    pub present: bool,
+    pub system: bool,
+    pub gid: Option<u64>,
+}
+
+impl GroupInput {
+    #[must_use]
+    pub fn new(group: impl Into<String>) -> Self {
+        Self { group: group.into(), present: true, system: false, gid: None }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Group;
+
+impl StatefulOperation for Group {
+    type Input = GroupInput;
+
+    fn name(&self) -> &'static str {
+        "server.group"
+    }
+
+    fn is_idempotent(&self) -> bool {
+        true
+    }
+
+    fn commands<'a>(
+        &'a self,
+        input: &'a Self::Input,
+        connector: &'a dyn Connector,
+        fact_options: &'a FactOptions,
+    ) -> StatefulOperationFuture<'a> {
+        Box::pin(async move {
+            let facts = FactExecutor::new(connector, fact_options);
+            let groups = facts.get(&Groups, &()).await?;
+            let os = facts.get(&Os, &()).await?;
+            Ok(group_commands(input, &groups, os.as_deref()))
+        })
+    }
+}
+
+fn group_commands(input: &GroupInput, groups: &[String], os: Option<&str>) -> Vec<Command> {
+    let present = groups.iter().any(|group| group == &input.group);
+    let freebsd = os == Some("FreeBSD");
+    if present && !input.present {
+        return if freebsd {
+            vec![command([raw("pw"), raw("groupdel"), raw("-n"), quoted(&input.group)])]
+        } else {
+            vec![command([raw("groupdel"), quoted(&input.group)])]
+        };
+    }
+    if present || !input.present {
+        return Vec::new();
+    }
+
+    let mut bits = if freebsd { vec![raw("pw"), raw("groupadd")] } else { vec![raw("groupadd")] };
+    if input.system && !os.is_some_and(|os| os.contains("BSD")) {
+        bits.push(raw("-r"));
+    }
+    if freebsd {
+        bits.extend([raw("-n"), quoted(&input.group)]);
+    } else {
+        bits.push(quoted(&input.group));
+    }
+    if let Some(gid) = input.gid {
+        bits.extend([raw(if freebsd { "-g" } else { "--gid" }), quoted(&gid.to_string())]);
+    }
+    vec![command(bits)]
+}
+
 fn raw(value: impl Into<String>) -> CommandBit {
     CommandBit::from(value.into())
 }
@@ -104,7 +177,8 @@ fn command(bits: impl IntoIterator<Item = CommandBit>) -> Command {
 mod tests {
     use std::fs;
 
-    use super::{Hostname, HostnameFile, HostnameInput};
+    use super::{GroupInput, Hostname, HostnameFile, HostnameInput, group_commands};
+    use crate::api::Command;
     use crate::connectors::LocalConnector;
     use crate::facts::FactOptions;
     use crate::operations::StatefulOperation;
@@ -124,6 +198,27 @@ mod tests {
             .unwrap();
 
         assert!(current.is_empty());
+    }
+
+    #[test]
+    fn group_matches_linux_and_freebsd_reference_commands() {
+        let mut input = GroupInput::new("app users");
+        input.system = true;
+        input.gid = Some(1200);
+        let linux = group_commands(&input, &[], Some("Linux"));
+        let freebsd = group_commands(&input, &[], Some("FreeBSD"));
+
+        assert!(
+            matches!(&linux[0], Command::Shell(command) if command.raw_value() == "groupadd -r 'app users' --gid 1200")
+        );
+        assert!(
+            matches!(&freebsd[0], Command::Shell(command) if command.raw_value() == "pw groupadd -n 'app users' -g 1200")
+        );
+
+        input.present = false;
+        assert!(
+            matches!(&group_commands(&input, &["app users".to_owned()], Some("FreeBSD"))[0], Command::Shell(command) if command.raw_value() == "pw groupdel -n 'app users'")
+        );
     }
 }
 use std::slice;

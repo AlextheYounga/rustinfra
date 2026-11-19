@@ -3,7 +3,7 @@ use crate::api::{Command, CommandBit, StringCommand};
 use super::Operation;
 
 mod stateful;
-pub use stateful::{Hostname, HostnameFile, HostnameInput};
+pub use stateful::{Group, GroupInput, Hostname, HostnameFile, HostnameInput};
 
 /// One or more raw shell commands accepted by `server.shell`.
 #[derive(Clone, Debug, Eq, PartialEq)]
