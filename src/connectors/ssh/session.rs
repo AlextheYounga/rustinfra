@@ -1,4 +1,5 @@
 use std::io::Error as IoError;
+use std::mem::take;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,11 +17,9 @@ use tokio::time;
 
 use crate::api::{RsyncCommand, StringCommand};
 
-use super::auth::{
-    KeyAuthentication, authenticate_agent_at, authenticate_config_keys, authenticate_default_keys, authenticate_key,
-};
 use super::options::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
 use super::output::OutputCollector;
+use super::proxy;
 use crate::connectors::{
     CommandOutput, CommandResult, Connector, ConnectorError, ConnectorFuture, ConnectorTransferFuture,
     FileTransferOptions, OutputStream, RunOptions, make_unix_command,
@@ -51,6 +50,8 @@ pub enum SshConnectorError {
     TransferCommand { action: &'static str, stderr: String },
     #[error("SCP transfer failed: {0}")]
     Scp(String),
+    #[error("SSH proxy failed: {0}")]
+    Proxy(String),
     #[error("SSH command requested before connecting")]
     NotConnected,
     #[error("SSH command timed out after {0:?}")]
@@ -63,83 +64,18 @@ pub enum SshConnectorError {
 pub struct SshConnector {
     pub(super) options: SshConnectionOptions,
     session: RwLock<Option<Arc<SshHandle>>>,
+    jump_sessions: RwLock<Vec<Arc<SshHandle>>>,
     sftp: RwLock<Option<Arc<SftpSession>>>,
 }
 
 impl SshConnector {
     #[must_use]
     pub fn new(options: SshConnectionOptions) -> Self {
-        Self { options, session: RwLock::new(None), sftp: RwLock::new(None) }
+        Self { options, session: RwLock::new(None), jump_sessions: RwLock::new(Vec::new()), sftp: RwLock::new(None) }
     }
 
-    async fn connect_session(&self) -> Result<SshHandle, SshConnectorError> {
-        time::timeout(self.options.connect_timeout, self.connect_session_without_timeout())
-            .await
-            .map_err(|_| SshConnectorError::Timeout(self.options.connect_timeout))?
-    }
-
-    async fn connect_session_without_timeout(&self) -> Result<SshHandle, SshConnectorError> {
-        let config = Arc::new(client::Config {
-            keepalive_interval: self.options.server_alive_interval,
-            ..client::Config::default()
-        });
-        let handler = ServerKeyHandler {
-            hostname: self.options.hostname.clone(),
-            port: self.options.port,
-            known_hosts_files: self.options.known_hosts_files.clone(),
-            policy: self.options.host_key_policy,
-        };
-        let address = (self.options.hostname.as_str(), self.options.port);
-        let mut session = client::connect(config, address, handler).await.map_err(|error| match error {
-            HandlerError::Protocol(error) => SshConnectorError::Protocol(error),
-            HandlerError::HostKey(error) => SshConnectorError::Key(error),
-        })?;
-
-        if self.authenticate(&mut session).await? {
-            Ok(session)
-        } else {
-            Err(SshConnectorError::Authentication {
-                user: self.options.user.clone(),
-                host: self.options.hostname.clone(),
-            })
-        }
-    }
-
-    async fn authenticate(&self, session: &mut SshHandle) -> Result<bool, SshConnectorError> {
-        if let Some(key_path) = &self.options.key {
-            let authentication =
-                KeyAuthentication { password: self.options.key_password.as_ref(), ..Default::default() };
-            if authenticate_key(session, &self.options.user, key_path, authentication).await? {
-                return Ok(true);
-            }
-        } else {
-            if authenticate_config_keys(
-                session,
-                &self.options.user,
-                &self.options.config_identity_files,
-                KeyAuthentication {
-                    certificate_path: self.options.config_certificate_file.as_deref(),
-                    password: self.options.key_password.as_ref(),
-                },
-            )
-            .await?
-            {
-                return Ok(true);
-            }
-            if self.options.allow_agent
-                && authenticate_agent_at(session, &self.options.user, self.options.identity_agent.as_deref()).await?
-            {
-                return Ok(true);
-            }
-            if self.options.look_for_keys && authenticate_default_keys(session, &self.options.user).await? {
-                return Ok(true);
-            }
-        }
-
-        if let Some(password) = &self.options.password {
-            return Ok(session.authenticate_password(&self.options.user, password.unmask()).await?.success());
-        }
-        Ok(session.authenticate_none(&self.options.user).await?.success())
+    async fn connect_session(&self) -> Result<(SshHandle, Vec<SshHandle>), SshConnectorError> {
+        proxy::connect(&self.options).await
     }
 
     pub(super) async fn run(
@@ -193,7 +129,8 @@ impl Connector for SshConnector {
             let mut retries = self.options.connect_retries;
             loop {
                 match self.connect_session().await {
-                    Ok(session) => {
+                    Ok((session, jumps)) => {
+                        *self.jump_sessions.write().await = jumps.into_iter().map(Arc::new).collect();
                         *current = Some(Arc::new(session));
                         return Ok(());
                     }
@@ -210,11 +147,29 @@ impl Connector for SshConnector {
 
     fn disconnect(&self) -> ConnectorTransferFuture<'_> {
         Box::pin(async move {
+            let mut first_error = None;
             if let Some(sftp) = self.sftp.write().await.take() {
-                sftp.close().await.map_err(SshConnectorError::from)?;
+                if let Err(error) = sftp.close().await {
+                    first_error = Some(SshConnectorError::from(error));
+                }
             }
             if let Some(session) = self.session.write().await.take() {
-                session.disconnect(Disconnect::ByApplication, "", "English").await.map_err(SshConnectorError::from)?;
+                if let Err(error) = session.disconnect(Disconnect::ByApplication, "", "English").await
+                    && first_error.is_none()
+                {
+                    first_error = Some(SshConnectorError::from(error));
+                }
+            }
+            let jumps = take(&mut *self.jump_sessions.write().await);
+            for session in jumps.into_iter().rev() {
+                if let Err(error) = session.disconnect(Disconnect::ByApplication, "", "English").await
+                    && first_error.is_none()
+                {
+                    first_error = Some(SshConnectorError::from(error));
+                }
+            }
+            if let Some(error) = first_error {
+                return Err(ConnectorError::from(error));
             }
             Ok(())
         })
@@ -320,6 +275,15 @@ impl client::Handler for ServerKeyHandler {
 }
 
 impl ServerKeyHandler {
+    pub(super) fn for_options(options: &SshConnectionOptions) -> Self {
+        Self {
+            hostname: options.hostname.clone(),
+            port: options.port,
+            known_hosts_files: options.known_hosts_files.clone(),
+            policy: options.host_key_policy,
+        }
+    }
+
     fn check_known_host(&self, key: &PublicKey) -> Result<bool, KeyError> {
         if self.known_hosts_files.is_empty() {
             return check_known_hosts(&self.hostname, self.port, key);

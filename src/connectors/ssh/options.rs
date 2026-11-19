@@ -47,6 +47,9 @@ pub struct SshConnectionOptions {
     pub connect_retry_min_delay: Duration,
     pub connect_retry_max_delay: Duration,
     pub file_transfer_protocol: FileTransferProtocol,
+    pub proxy_command: Option<Vec<String>>,
+    pub proxy_jump: Vec<Self>,
+    pub proxy_jump_channel_timeout: Duration,
 }
 
 #[derive(Clone, Debug, Error, PartialEq)]
@@ -65,11 +68,24 @@ pub enum SshOptionsError {
     MissingUser,
     #[error("SSH config error: {0}")]
     Config(String),
+    #[error("invalid ProxyJump target: {0}")]
+    InvalidProxyJump(String),
+    #[error("ProxyJump loop detected through: {0}")]
+    ProxyJumpLoop(String),
 }
 
 impl SshConnectionOptions {
     pub fn from_data(host_name: &str, data: &Data, connect_timeout: Duration) -> Result<Self, SshOptionsError> {
-        let alias = optional_string(data, SSH_HOSTNAME_DATA_KEY)?.unwrap_or(host_name);
+        Self::build(BuildRequest { host_name, data, connect_timeout, use_config_timeout: false }, &mut Vec::new())
+    }
+
+    fn build(request: BuildRequest<'_>, stack: &mut Vec<String>) -> Result<Self, SshOptionsError> {
+        let data = request.data;
+        let alias = optional_string(data, SSH_HOSTNAME_DATA_KEY)?.unwrap_or(request.host_name);
+        if stack.iter().any(|host| host == alias) {
+            return Err(SshOptionsError::ProxyJumpLoop(alias.to_owned()));
+        }
+        stack.push(alias.to_owned());
         let config_file = optional_string(data, "ssh_config_file")?;
         let resolved = config::resolve(alias, config_file).map_err(SshOptionsError::Config)?;
         let hostname = resolved.as_ref().and_then(|params| params.host_name.as_deref()).unwrap_or(alias).to_owned();
@@ -124,7 +140,21 @@ impl SshConnectionOptions {
             .filter(|path| !path.eq_ignore_ascii_case("none"))
             .map(config::expand_user);
 
-        Ok(Self {
+        let connect_timeout = if request.use_config_timeout {
+            resolved.as_ref().and_then(|params| params.connect_timeout).unwrap_or(request.connect_timeout)
+        } else {
+            request.connect_timeout
+        };
+        let proxy_command =
+            unsupported_values(resolved.as_ref(), "proxycommand").into_iter().map(str::to_owned).collect::<Vec<_>>();
+        let proxy_command = (!proxy_command.is_empty()).then_some(proxy_command);
+        let proxy_specs = if proxy_command.is_none() {
+            resolved.as_ref().and_then(|params| params.proxy_jump.clone()).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+
+        let mut options = Self {
             hostname,
             port,
             user,
@@ -149,8 +179,67 @@ impl SshConnectionOptions {
             connect_retry_min_delay: retry_min,
             connect_retry_max_delay: retry_max,
             file_transfer_protocol,
-        })
+            proxy_command,
+            proxy_jump: Vec::new(),
+            proxy_jump_channel_timeout: connect_timeout,
+        };
+        for spec in proxy_specs {
+            if spec.eq_ignore_ascii_case("none") {
+                continue;
+            }
+            let (hop_name, hop_data) = proxy_jump_data(&spec, config_file)?;
+            let mut hop = Self::build(
+                BuildRequest { host_name: &hop_name, data: &hop_data, connect_timeout, use_config_timeout: true },
+                stack,
+            )?;
+            hop.proxy_jump_channel_timeout = connect_timeout;
+            options.proxy_jump.append(&mut hop.proxy_jump);
+            options.proxy_jump.push(hop);
+        }
+        stack.pop();
+        Ok(options)
     }
+}
+
+#[derive(Clone, Copy)]
+struct BuildRequest<'a> {
+    host_name: &'a str,
+    data: &'a Data,
+    connect_timeout: Duration,
+    use_config_timeout: bool,
+}
+
+fn proxy_jump_data(spec: &str, config_file: Option<&str>) -> Result<(String, Data), SshOptionsError> {
+    let (user, host_port) = match spec.rsplit_once('@') {
+        Some((user, host)) if !user.is_empty() => (Some(user), host),
+        _ => (None, spec),
+    };
+    let (host, port) = if host_port.matches(':').count() <= 1 {
+        match host_port.rsplit_once(':') {
+            Some((host, port)) if !host.is_empty() && !port.is_empty() => {
+                let port = port.parse::<u64>().map_err(|_| SshOptionsError::InvalidProxyJump(spec.to_owned()))?;
+                (host, Some(port))
+            }
+            _ => (host_port, None),
+        }
+    } else {
+        (host_port, None)
+    };
+    if host.is_empty() {
+        return Err(SshOptionsError::InvalidProxyJump(spec.to_owned()));
+    }
+
+    let mut data = Data::new();
+    if let Some(config_file) = config_file {
+        data.insert("ssh_config_file".to_owned(), Value::String(config_file.to_owned()));
+    }
+    if let Some(user) = user {
+        data.insert("ssh_user".to_owned(), Value::String(user.to_owned()));
+    }
+    if let Some(port) = port {
+        data.insert("ssh_port".to_owned(), Value::Number(port.into()));
+    }
+    Ok((host.to_owned(), data))
 }
 
 fn optional_string<'a>(
@@ -214,88 +303,4 @@ fn unsupported_value<'a>(params: Option<&'a ssh2_config::HostParams>, key: &str)
 }
 
 #[cfg(test)]
-mod tests {
-    use std::fs;
-    use std::time::Duration;
-
-    use serde_json::json;
-    use tempfile::tempdir;
-
-    use super::{HostKeyPolicy, SshConnectionOptions, SshOptionsError};
-    use crate::api::Data;
-
-    #[test]
-    fn inventory_data_overrides_ssh_defaults_and_secrets_stay_masked() {
-        let data = [
-            ("ssh_hostname".to_owned(), json!("target")),
-            ("ssh_port".to_owned(), json!(2202)),
-            ("ssh_user".to_owned(), json!("deploy")),
-            ("ssh_password".to_owned(), json!("secret")),
-            ("ssh_allow_agent".to_owned(), json!(false)),
-            ("ssh_strict_host_key_checking".to_owned(), json!("yes")),
-        ]
-        .into_iter()
-        .collect::<Data>();
-
-        let options = SshConnectionOptions::from_data("alias", &data, Duration::from_secs(7)).unwrap();
-
-        assert_eq!(options.hostname, "target");
-        assert_eq!(options.port, 2202);
-        assert_eq!(options.user, "deploy");
-        assert_eq!(options.password.as_ref().unwrap().unmask(), "secret");
-        assert_eq!(format!("{:?}", options.password), "Some(HiddenValue(\"*MASKED*\"))");
-        assert!(!options.allow_agent);
-        assert_eq!(options.host_key_policy, HostKeyPolicy::Strict);
-        assert_eq!(options.connect_timeout, Duration::from_secs(7));
-    }
-
-    #[test]
-    fn invalid_policy_is_rejected_before_connecting() {
-        let data =
-            [("ssh_user".to_owned(), json!("deploy")), ("ssh_strict_host_key_checking".to_owned(), json!("sometimes"))]
-                .into_iter()
-                .collect::<Data>();
-
-        let error = SshConnectionOptions::from_data("host", &data, Duration::from_secs(10)).unwrap_err();
-
-        assert_eq!(error, SshOptionsError::InvalidHostKeyPolicy("sometimes".to_owned()));
-    }
-
-    #[test]
-    fn ssh_config_resolves_alias_and_inventory_values_override_connection_fields() {
-        let directory = tempdir().unwrap();
-        let config = directory.path().join("config");
-        fs::write(
-            &config,
-            "Host alias\n  HostName config-host\n  User config-user\n  Port 2202\n  IdentityFile /config/key-one\n  IdentityFile /config/key-two\n  CertificateFile /config/key-cert.pub\n  ServerAliveInterval 15\n  StrictHostKeyChecking yes\n  UserKnownHostsFile ~/known-one ~/known-two\n  IdentityAgent ~/agent.sock\n",
-        )
-        .unwrap();
-        let data = [
-            ("ssh_config_file".to_owned(), json!(config)),
-            ("ssh_user".to_owned(), json!("inventory-user")),
-            ("ssh_port".to_owned(), json!(2222)),
-            ("ssh_key".to_owned(), json!("/inventory/key")),
-        ]
-        .into_iter()
-        .collect::<Data>();
-
-        let options = SshConnectionOptions::from_data("alias", &data, Duration::from_secs(7)).unwrap();
-
-        assert_eq!(options.hostname, "config-host");
-        assert_eq!(options.user, "inventory-user");
-        assert_eq!(options.port, 2222);
-        assert_eq!(options.key, Some("/inventory/key".into()));
-        assert!(options.config_identity_files.is_empty());
-        assert_eq!(options.config_certificate_file, None);
-        assert_eq!(options.server_alive_interval, Some(Duration::from_secs(15)));
-        assert_eq!(options.host_key_policy, HostKeyPolicy::Strict);
-        assert_eq!(options.known_hosts_files.len(), 2);
-        assert!(options.known_hosts_files[0].ends_with("known-one"));
-        assert!(options.identity_agent.as_ref().is_some_and(|path| path.ends_with("agent.sock")));
-
-        let config_only_data = [("ssh_config_file".to_owned(), json!(config))].into_iter().collect::<Data>();
-        let config_only = SshConnectionOptions::from_data("alias", &config_only_data, Duration::from_secs(7)).unwrap();
-        assert_eq!(config_only.config_identity_files.len(), 2);
-        assert_eq!(config_only.config_certificate_file, Some("/config/key-cert.pub".into()));
-    }
-}
+mod tests;

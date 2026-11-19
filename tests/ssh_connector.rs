@@ -4,18 +4,24 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+#[path = "ssh_connector/support.rs"]
+mod ssh_connector_support;
+
 use russh::keys::{Algorithm, PrivateKey};
 use russh::server::{self, Server as _};
 use russh::{Channel, ChannelId, Error as RusshError};
-use russh_sftp::protocol::{Data, FileAttributes, Handle, OpenFlags, Status, StatusCode};
+use russh_sftp::protocol::{Data as SftpData, FileAttributes, Handle, OpenFlags, Status, StatusCode};
 use russh_sftp::server::{Handler as SftpHandler, run as run_sftp_server};
-use rustinfra::api::{HiddenValue, StringCommand};
+use rustinfra::api::{Data, HiddenValue, StringCommand};
 use rustinfra::connectors::{
     Connector, FileTransferOptions, FileTransferProtocol, HostKeyPolicy, RunOptions, SshConnectionOptions, SshConnector,
 };
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader, split};
-use tokio::net::TcpListener;
+use serde_json::json;
+use tokio::io::copy_bidirectional;
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex as AsyncMutex;
+
+use ssh_connector_support::run_scp_server;
 
 #[derive(Clone)]
 struct CommandServer {
@@ -43,6 +49,14 @@ impl server::Handler for CommandServer {
         }
     }
 
+    async fn auth_none(&mut self, user: &str) -> Result<server::Auth, Self::Error> {
+        if user == "deploy" {
+            Ok(server::Auth::Accept)
+        } else {
+            Ok(server::Auth::Reject { proceed_with_methods: None, partial_success: false })
+        }
+    }
+
     async fn channel_open_session(
         &mut self,
         channel: Channel<server::Msg>,
@@ -51,6 +65,30 @@ impl server::Handler for CommandServer {
     ) -> Result<(), Self::Error> {
         self.channels.lock().await.insert(channel.id(), channel);
         reply.accept().await;
+        Ok(())
+    }
+
+    async fn channel_open_direct_tcpip(
+        &mut self,
+        channel: Channel<server::Msg>,
+        host_to_connect: &str,
+        port_to_connect: u32,
+        _originator_address: &str,
+        _originator_port: u32,
+        reply: server::ChannelOpenHandle,
+        _session: &mut server::Session,
+    ) -> Result<(), Self::Error> {
+        let Ok(port) = u16::try_from(port_to_connect) else {
+            return Ok(());
+        };
+        let Ok(mut socket) = TcpStream::connect((host_to_connect, port)).await else {
+            return Ok(());
+        };
+        reply.accept().await;
+        tokio::spawn(async move {
+            let mut stream = channel.into_stream();
+            let _ = copy_bidirectional(&mut stream, &mut socket).await;
+        });
         Ok(())
     }
 
@@ -145,7 +183,7 @@ impl SftpHandler for MemorySftp {
         Ok(ok_status(id))
     }
 
-    async fn read(&mut self, id: u32, handle: String, offset: u64, len: u32) -> Result<Data, Self::Error> {
+    async fn read(&mut self, id: u32, handle: String, offset: u64, len: u32) -> Result<SftpData, Self::Error> {
         let files = self.files.lock().map_err(|_| StatusCode::Failure)?;
         let file = files.get(&handle).ok_or(StatusCode::NoSuchFile)?;
         let offset = usize::try_from(offset).map_err(|_| StatusCode::Failure)?;
@@ -154,7 +192,7 @@ impl SftpHandler for MemorySftp {
         }
         let len = usize::try_from(len).map_err(|_| StatusCode::Failure)?;
         let end = file.len().min(offset.saturating_add(len));
-        Ok(Data { id, data: file[offset..end].to_vec() })
+        Ok(SftpData { id, data: file[offset..end].to_vec() })
     }
 
     async fn close(&mut self, id: u32, _handle: String) -> Result<Status, Self::Error> {
@@ -164,62 +202,6 @@ impl SftpHandler for MemorySftp {
 
 fn ok_status(id: u32) -> Status {
     Status { id, status_code: StatusCode::Ok, error_message: "Ok".to_owned(), language_tag: "en-US".to_owned() }
-}
-
-async fn run_scp_server(channel: Channel<server::Msg>, command: &str, files: Arc<Mutex<HashMap<String, Vec<u8>>>>) {
-    let stream = channel.into_stream();
-    let (reader, mut writer) = split(stream);
-    let mut reader = BufReader::new(reader);
-    if let Some(path) = command.strip_prefix("scp -t ") {
-        if writer.write_all(&[0]).await.is_err() {
-            return;
-        }
-        let mut header = String::new();
-        if reader.read_line(&mut header).await.is_err() {
-            return;
-        }
-        let size = header.split_whitespace().nth(1).and_then(|value| value.parse::<usize>().ok());
-        let Some(size) = size else {
-            return;
-        };
-        if writer.write_all(&[0]).await.is_err() {
-            return;
-        }
-        let mut content = vec![0; size];
-        if reader.read_exact(&mut content).await.is_err() {
-            return;
-        }
-        let mut terminator = [1];
-        if reader.read_exact(&mut terminator).await.is_err() || terminator != [0] {
-            return;
-        }
-        if let Ok(mut remote_files) = files.lock() {
-            remote_files.insert(path.to_owned(), content);
-        }
-        let _ = writer.write_all(&[0]).await;
-    } else if let Some(path) = command.strip_prefix("scp -f ") {
-        let mut confirmation = [1];
-        if reader.read_exact(&mut confirmation).await.is_err() || confirmation != [0] {
-            return;
-        }
-        let content = files.lock().ok().and_then(|remote_files| remote_files.get(path).cloned());
-        let Some(content) = content else {
-            let _ = writer.write_all(b"\x01missing\n").await;
-            return;
-        };
-        let basename = path.rsplit('/').next().unwrap_or(path);
-        if writer.write_all(format!("C0644 {} {basename}\n", content.len()).as_bytes()).await.is_err() {
-            return;
-        }
-        if reader.read_exact(&mut confirmation).await.is_err() || confirmation != [0] {
-            return;
-        }
-        if writer.write_all(&content).await.is_err() || writer.write_all(&[0]).await.is_err() {
-            return;
-        }
-        let _ = reader.read_exact(&mut confirmation).await;
-    }
-    let _ = writer.shutdown().await;
 }
 
 #[tokio::test]
@@ -266,6 +248,9 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         connect_retry_min_delay: Duration::ZERO,
         connect_retry_max_delay: Duration::ZERO,
         file_transfer_protocol: FileTransferProtocol::Sftp,
+        proxy_command: None,
+        proxy_jump: Vec::new(),
+        proxy_jump_channel_timeout: Duration::from_secs(2),
     });
     connector.connect().await.unwrap();
     let options = RunOptions { success_exit_codes: vec![7], ..RunOptions::default() };
@@ -334,6 +319,9 @@ async fn persistent_session_runs_commands_on_independent_channels() {
         connect_retry_min_delay: Duration::ZERO,
         connect_retry_max_delay: Duration::ZERO,
         file_transfer_protocol: FileTransferProtocol::Scp,
+        proxy_command: None,
+        proxy_jump: Vec::new(),
+        proxy_jump_channel_timeout: Duration::from_secs(2),
     });
     scp_connector.connect().await.unwrap();
     scp_connector.put_file(&upload, "/scp-remote", transfer).await.unwrap();
@@ -345,6 +333,54 @@ async fn persistent_session_runs_commands_on_independent_channels() {
     assert!(scp_connector.get_file("/scp-missing", &preserved, transfer).await.is_err());
     assert_eq!(fs::read(preserved).unwrap(), b"preserved");
     scp_connector.disconnect().await.unwrap();
+
+    let config = local.path().join("ssh-config");
+    fs::write(
+        &config,
+        format!(
+            "Host jump\n  HostName 127.0.0.1\n  Port {port}\n  User deploy\n  StrictHostKeyChecking no\nHost target\n  HostName 127.0.0.1\n  Port {port}\n  User deploy\n  ProxyJump jump\n  StrictHostKeyChecking no\n"
+        ),
+    )
+    .unwrap();
+    let proxy_data = [("ssh_config_file".to_owned(), json!(config)), ("ssh_password".to_owned(), json!("secret"))]
+        .into_iter()
+        .collect::<Data>();
+    let proxy_options = SshConnectionOptions::from_data("target", &proxy_data, Duration::from_secs(2)).unwrap();
+    let proxy_connector = SshConnector::new(proxy_options);
+    proxy_connector.connect().await.unwrap();
+    let proxied = proxy_connector.run_shell_command(StringCommand::new(["printf proxied"]), &options).await.unwrap();
+    assert!(proxied.success);
+    assert_eq!(proxied.output.stdout(), "out");
+    proxy_connector.disconnect().await.unwrap();
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let proxy_script = local.path().join("proxy-command");
+        fs::write(
+            &proxy_script,
+            "#!/usr/bin/env bash\n[ \"$3\" = deploy ] || exit 2\nexec 3<>\"/dev/tcp/$1/$2\" || exit 3\ncat <&3 &\nreader=$!\ncat >&3\nwait \"$reader\"\n",
+        )
+        .unwrap();
+        fs::set_permissions(&proxy_script, fs::Permissions::from_mode(0o700)).unwrap();
+        fs::write(
+            &config,
+            format!(
+                "Host command\n  HostName 127.0.0.1\n  Port {port}\n  User deploy\n  ProxyCommand {} %h %p %r\n  StrictHostKeyChecking no\n",
+                proxy_script.display()
+            ),
+        )
+        .unwrap();
+        let command_options = SshConnectionOptions::from_data("command", &proxy_data, Duration::from_secs(2)).unwrap();
+        let command_connector = SshConnector::new(command_options);
+        command_connector.connect().await.unwrap();
+        let command_result =
+            command_connector.run_shell_command(StringCommand::new(["printf proxy-command"]), &options).await.unwrap();
+        assert!(command_result.success);
+        assert_eq!(command_result.output.stdout(), "out");
+        command_connector.disconnect().await.unwrap();
+    }
 
     server_task.abort();
     assert!(server_task.await.unwrap_err().is_cancelled());

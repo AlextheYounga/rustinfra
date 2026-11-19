@@ -2,6 +2,7 @@ mod auth;
 mod config;
 mod options;
 mod output;
+mod proxy;
 mod scp;
 mod session;
 mod transfer;

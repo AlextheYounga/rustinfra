@@ -5,6 +5,7 @@ use std::sync::Arc;
 use russh::keys::{PrivateKeyWithHashAlg, load_openssh_certificate, load_secret_key};
 
 use super::config::HOME_ENVIRONMENT_VARIABLE;
+use super::options::SshConnectionOptions;
 use super::session::{SshConnectorError, SshHandle};
 use crate::api::HiddenValue;
 
@@ -12,6 +13,39 @@ use crate::api::HiddenValue;
 pub(super) struct KeyAuthentication<'a> {
     pub certificate_path: Option<&'a Path>,
     pub password: Option<&'a HiddenValue>,
+}
+
+pub(super) async fn authenticate(
+    options: &SshConnectionOptions,
+    session: &mut SshHandle,
+) -> Result<bool, SshConnectorError> {
+    if let Some(key_path) = &options.key {
+        let authentication = KeyAuthentication { password: options.key_password.as_ref(), ..Default::default() };
+        if authenticate_key(session, &options.user, key_path, authentication).await? {
+            return Ok(true);
+        }
+    } else {
+        let authentication = KeyAuthentication {
+            certificate_path: options.config_certificate_file.as_deref(),
+            password: options.key_password.as_ref(),
+        };
+        if authenticate_config_keys(session, &options.user, &options.config_identity_files, authentication).await? {
+            return Ok(true);
+        }
+        if options.allow_agent
+            && authenticate_agent_at(session, &options.user, options.identity_agent.as_deref()).await?
+        {
+            return Ok(true);
+        }
+        if options.look_for_keys && authenticate_default_keys(session, &options.user).await? {
+            return Ok(true);
+        }
+    }
+
+    if let Some(password) = &options.password {
+        return Ok(session.authenticate_password(&options.user, password.unmask()).await?.success());
+    }
+    Ok(session.authenticate_none(&options.user).await?.success())
 }
 
 pub(super) async fn authenticate_key(
