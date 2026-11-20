@@ -1,10 +1,16 @@
 # rustinfra
 
-rustinfra is a Rust-native translation of pyinfra. Infrastructure definitions, inventory,
-operations, facts, connection handling, and execution all run in Rust; pyinfra is used only as the
-behavioral reference.
+Infrastructure deserves a real programming language. rustinfra brings pyinfra’s proven deployment
+model to Rust: typed deploys, explicit behavior, and first-class parallel execution—without a Python
+runtime or a second configuration language.
 
-Deploys are ordinary typed Rust programs compiled against this crate:
+The translation is deliberate: pyinfra remains the behavioral reference, not a runtime dependency.
+We preserve the workflows and semantics that operators rely on, then use Rust to make them clear,
+composable, and safe to run concurrently.
+
+## A deploy is Rust
+
+Inventory, operations, and execution are ordinary Rust code:
 
 ```rust
 use std::error::Error;
@@ -20,10 +26,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         hosts: vec![HostSpec::local()],
         ..InventorySpec::default()
     })?;
+
     let deploy = PreparedDeploy::prepare(&inventory, |host| {
         host.add(Shell, ShellCommands::from("echo hello from rustinfra"))?;
         Ok(())
     })?;
+
     let config = Config::default();
     let runtime = DeployRuntime::from_inventory(
         &inventory,
@@ -36,12 +44,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-Run the included example with:
+Run it:
 
 ```sh
 cargo run --example local_deploy
 ```
 
-The translation has reached the documented 85% product-capability milestone and remains in
-progress. See `PARITY.md` for the milestone definition and remaining work, and `CONTEXT.md` and
-`AGENTS.md` for compatibility requirements and architecture rules.
+## Where it stands
+
+rustinfra has reached the **85% product-capability milestone**. That means the core deployment
+workflows are runnable; it does **not** mean 85% of pyinfra’s operation and fact catalog has been
+ported. The remaining work is real, and the parity document says what it is.
+
+Today, rustinfra covers the deploy runtime and SSH foundation, filesystem convergence, Debian and
+RPM packages, systemd, users, templates, line editing, sysctl, Git, archive extraction, cron, pip
+environments, APT sources, iptables, locales, and security limits.
+
+For the exact milestone definition and open gaps, read [PARITY.md](PARITY.md). For compatibility
+rules and architecture, see [CONTEXT.md](CONTEXT.md) and [AGENTS.md](AGENTS.md).
