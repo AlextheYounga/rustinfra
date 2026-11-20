@@ -6,7 +6,9 @@ use std::pin::Pin;
 
 pub mod apk;
 pub mod apt;
+pub mod brew;
 pub mod cargo;
+pub mod choco;
 mod command_executor;
 pub mod crontab;
 mod deploy;

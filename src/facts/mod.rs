@@ -2,7 +2,9 @@
 
 pub mod apk;
 pub mod apt;
+pub mod brew;
 pub mod cargo;
+pub mod choco;
 pub mod crontab;
 pub mod deb;
 mod executor;

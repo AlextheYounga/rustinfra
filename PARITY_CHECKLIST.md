@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 55 operations.
+- **Rust operation surface:** approximately 64 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 68 facts.
+- **Rust fact surface:** approximately 75 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -64,11 +64,13 @@ must not be updated from estimates alone.
   pinned versions, fact parsing, and all reference fixtures.
 - [ ] **Partial** `apt` — packages, legacy repositories, and deb822 sources exist; keys and remaining
   operations are outstanding.
-- [ ] **Missing** `brew`
+- [x] `brew` — formula and cask convergence across old/new CLIs, repository updates, upgrades, taps,
+  trust state, JSON/legacy package facts, shell-safe values, and all reference fixtures.
 - [ ] **Missing** `bsdinit`
 - [x] `cargo` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
   fixtures.
-- [ ] **Missing** `choco`
+- [x] `choco` — Chocolatey installation, package convergence and upgrades, both facts, and all
+  reference fixtures.
 - [ ] **Partial** `crontab` — core operation exists; complete fixture qualification is outstanding.
 - [ ] **Partial** `dnf` — package convergence exists; keys, repositories, and remaining operations
   are outstanding.
@@ -133,10 +135,10 @@ must not be updated from estimates alone.
 
 - [x] `apk`
 - [ ] **Partial** `apt`
-- [ ] **Missing** `brew`
+- [x] `brew`
 - [ ] **Missing** `bsdinit`
 - [x] `cargo`
-- [ ] **Missing** `choco`
+- [x] `choco`
 - [ ] **Partial** `crontab`
 - [ ] **Partial** `deb`
 - [ ] **Missing** `dnf`
