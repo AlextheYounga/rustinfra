@@ -128,7 +128,10 @@ fn expand_deb822(lines: &[&str], repositories: &mut Vec<AptRepo>) {
             if let Some(key) = &current_key {
                 fields.entry(key.clone()).and_modify(|value| {
                     value.push('\n');
-                    value.push_str(line[1..].trim_end());
+                    let continuation = line[1..].trim_end();
+                    if continuation != "." {
+                        value.push_str(continuation);
+                    }
                 });
             }
         } else if let Some((key, value)) = line.split_once(':') {
@@ -148,7 +151,12 @@ fn expand_deb822(lines: &[&str], repositories: &mut Vec<AptRepo>) {
     let mut options = IndexMap::new();
     for (field, option) in [("Architectures", "arch"), ("Signed-By", "signed-by"), ("Trusted", "trusted")] {
         if let Some(value) = fields.get(field) {
-            options.insert(option.to_owned(), value.split_whitespace().map(str::to_owned).collect());
+            let values = if field == "Signed-By" && value.contains("-----BEGIN PGP") {
+                vec![value.clone()]
+            } else {
+                value.split_whitespace().map(str::to_owned).collect()
+            };
+            options.insert(option.to_owned(), values);
         }
     }
     for repository_type in types.split_whitespace() {
@@ -192,5 +200,24 @@ mod tests {
         let repositories = AptSources.process(&output, &()).unwrap();
         assert_eq!(repositories.len(), 4);
         assert_eq!(repositories[0].options["signed-by"], ["/key.gpg"]);
+    }
+
+    #[test]
+    fn preserves_inline_deb822_signing_key_as_one_option() {
+        let output = [
+            "##PYINFRA_FILE /etc/apt/sources.list.d/vendor.sources".to_owned(),
+            "Types: deb".to_owned(),
+            "URIs: https://vendor".to_owned(),
+            "Suites: stable".to_owned(),
+            "Signed-By:".to_owned(),
+            " -----BEGIN PGP PUBLIC KEY BLOCK-----".to_owned(),
+            " .".to_owned(),
+            " abc123".to_owned(),
+            " -----END PGP PUBLIC KEY BLOCK-----".to_owned(),
+        ];
+        let repositories = AptSources.process(&output, &()).unwrap();
+        let key = &repositories[0].options["signed-by"];
+        assert_eq!(key.len(), 1);
+        assert!(key[0].contains("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nabc123"));
     }
 }
