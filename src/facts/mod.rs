@@ -6,6 +6,7 @@ pub mod deb;
 mod executor;
 pub mod files;
 pub mod git;
+pub mod iptables;
 pub mod pip;
 pub mod rpm;
 pub mod server;
