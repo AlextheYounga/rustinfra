@@ -1,5 +1,6 @@
 //! Typed, read-only queries against target hosts.
 
+pub mod apk;
 pub mod apt;
 pub mod cargo;
 pub mod crontab;
