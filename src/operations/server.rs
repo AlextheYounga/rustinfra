@@ -4,9 +4,11 @@ use super::Operation;
 
 mod stateful;
 mod sysctl;
+mod system_config;
 mod user;
 pub use stateful::{Group, GroupInput, Hostname, HostnameFile, HostnameInput};
 pub use sysctl::{Sysctl, SysctlInput};
+pub use system_config::{Locale, LocaleInput, SecurityLimit, SecurityLimitInput};
 pub use user::{User, UserInput};
 
 /// One or more raw shell commands accepted by `server.shell`.
