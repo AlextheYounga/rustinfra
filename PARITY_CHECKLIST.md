@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 73 operations.
+- **Rust operation surface:** approximately 85 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 86 facts.
+- **Rust fact surface:** approximately 94 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -115,13 +115,15 @@ must not be updated from estimates alone.
 - [ ] **Missing** `python`
 - [x] `runit` — management links, automatic-start state, runsv readiness, service control,
   alternative service/source directories, both facts, and all reference fixtures.
-- [ ] **Missing** `selinux`
+- [x] `selinux` — booleans, file contexts and mappings, direct and listed port types, typed context
+  data, shell-safe values, and all reference fixtures.
 - [ ] **Partial** `server` — shell, wait, kill, hostname, Linux distribution, groups, users, sysctl,
   locales, and security limits exist; the rest of the server catalog remains.
 - [x] `snap` — package installation/removal, classic confinement, channel refreshes, both facts, and
   all reference fixtures.
 - [ ] **Missing** `ssh`
-- [ ] **Missing** `supervisorctl`
+- [x] `supervisorctl` — single/group/all process convergence, configuration and masked
+  authentication options, all non-interactive actions, status/PID facts, and all reference fixtures.
 - [ ] **Partial** `systemd` — service convergence exists; remaining operations and full fixtures
   remain.
 - [x] `sysvinit` — service control, distribution-specific boot enablement, explicit runlevel links,
@@ -175,10 +177,10 @@ must not be updated from estimates alone.
 - [ ] **Missing** `postgresql`
 - [ ] **Partial** `rpm`
 - [x] `runit`
-- [ ] **Missing** `selinux`
+- [x] `selinux`
 - [ ] **Partial** `server`
 - [x] `snap`
-- [ ] **Missing** `supervisorctl`
+- [x] `supervisorctl`
 - [ ] **Partial** `systemd`
 - [x] `sysvinit`
 - [x] `upstart`
@@ -213,8 +215,8 @@ must not be updated from estimates alone.
 - [ ] **Partial** OpenBSD package and rc.d service workflows.
 - [ ] **Partial** Other BSD rc.d behavior represented by reference fixtures.
 - [ ] **Missing** macOS behavior.
-- [ ] **Partial** Non-systemd init systems; BSD init, OpenRC, runit, SysV init, and Upstart are
-  covered, while launchd and supervisorctl remain outstanding.
+- [ ] **Partial** Non-systemd init systems; BSD init, OpenRC, runit, SysV init, Upstart, and
+  supervisorctl are covered, while launchd remains outstanding.
 
 ## Verification gates
 
