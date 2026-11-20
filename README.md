@@ -57,8 +57,8 @@ workflows are runnable; it does **not** mean 85% of pyinfra’s operation and fa
 ported. The remaining work is real, and the parity document says what it is.
 
 Today, rustinfra covers the deploy runtime and SSH foundation, filesystem convergence, Debian and
-RPM packages, systemd, users, templates, line editing, sysctl, Git, archive extraction, cron, pip
-environments, APT sources, iptables, locales, and security limits.
+RPM and language packages, systemd, users, templates, line editing, sysctl, Git, archive extraction,
+cron, pip environments, APT sources, iptables, locales, and security limits.
 
 For the milestone definitions, read [PARITY.md](PARITY.md). Track the work toward strict behavioral
 and feature parity in [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md). Compatibility rules and

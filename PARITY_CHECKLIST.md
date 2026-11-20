@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 25–30%.
-- **Rust operation surface:** approximately 28 operations.
+- **Rust operation surface:** approximately 32 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 43 facts.
+- **Rust fact surface:** approximately 47 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -65,7 +65,8 @@ must not be updated from estimates alone.
   operations are outstanding.
 - [ ] **Missing** `brew`
 - [ ] **Missing** `bsdinit`
-- [ ] **Missing** `cargo`
+- [x] `cargo` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
+  fixtures.
 - [ ] **Missing** `choco`
 - [ ] **Partial** `crontab` — core operation exists; complete fixture qualification is outstanding.
 - [ ] **Partial** `dnf` — package convergence exists; keys, repositories, and remaining operations
@@ -74,15 +75,18 @@ must not be updated from estimates alone.
 - [ ] **Partial** `files` — core state, transfers, templates, line editing, and archives exist;
   remaining file operations are outstanding.
 - [ ] **Missing** `flatpak`
-- [ ] **Missing** `gem`
+- [x] `gem` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
+  fixtures.
 - [ ] **Partial** `git` — repository convergence exists; bare repositories and configuration remain.
-- [ ] **Missing** `go`
+- [x] `go` — package install, removal, upgrades, pinned versions, binary naming, fact parsing, and
+  all reference fixtures.
 - [ ] **Missing** `gpg`
 - [ ] **Partial** `iptables` — chains and rules exist; complete fixture qualification is outstanding.
 - [ ] **Missing** `launchd`
 - [ ] **Missing** `lxd`
 - [ ] **Missing** `mysql`
-- [ ] **Missing** `npm`
+- [x] `npm` — global and directory package install, removal, upgrades, pinned versions, fact
+  parsing, shell-safe directories, and all reference fixtures.
 - [ ] **Missing** `openrc`
 - [ ] **Missing** `opkg`
 - [ ] **Missing** `pacman`
@@ -120,7 +124,7 @@ must not be updated from estimates alone.
 - [ ] **Partial** `apt`
 - [ ] **Missing** `brew`
 - [ ] **Missing** `bsdinit`
-- [ ] **Missing** `cargo`
+- [x] `cargo`
 - [ ] **Missing** `choco`
 - [ ] **Partial** `crontab`
 - [ ] **Partial** `deb`
@@ -130,16 +134,16 @@ must not be updated from estimates alone.
 - [ ] **Partial** `files`
 - [ ] **Missing** `flatpak`
 - [ ] **Missing** `freebsd`
-- [ ] **Missing** `gem`
+- [x] `gem`
 - [ ] **Partial** `git`
-- [ ] **Missing** `go`
+- [x] `go`
 - [ ] **Missing** `gpg`
 - [ ] **Missing** `hardware`
 - [ ] **Partial** `iptables`
 - [ ] **Missing** `launchd`
 - [ ] **Missing** `lxd`
 - [ ] **Missing** `mysql`
-- [ ] **Missing** `npm`
+- [x] `npm`
 - [ ] **Missing** `openrc`
 - [ ] **Missing** `opkg`
 - [ ] **Missing** `pacman`
