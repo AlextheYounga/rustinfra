@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 47 operations.
+- **Rust operation surface:** approximately 55 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 59 facts.
+- **Rust fact surface:** approximately 68 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -75,7 +75,8 @@ must not be updated from estimates alone.
 - [ ] **Missing** `docker`
 - [ ] **Partial** `files` — core state, transfers, templates, line editing, and archives exist;
   remaining file operations are outstanding.
-- [ ] **Missing** `flatpak`
+- [x] `flatpak` — system/user package installation and removal, optional remotes, package metadata,
+  package listings, shell-safe values, and all reference fixtures.
 - [x] `gem` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
   fixtures.
 - [ ] **Partial** `git` — repository convergence exists; bare repositories and configuration remain.
@@ -96,12 +97,14 @@ must not be updated from estimates alone.
   shell-safe group lookup, and all reference fixtures.
 - [ ] **Partial** `pip` — virtual environments and packages exist; aliases and complete fixture
   qualification remain.
-- [ ] **Missing** `pipx`
+- [x] `pipx` — PEP 508 package install/removal, upgrades, PATH setup, environment and package facts,
+  shell-safe extra arguments, and all reference fixtures.
 - [x] `pkg` — FreeBSD and OpenBSD command selection, install/removal, automatic and explicit
   package paths, fact parsing, and all reference fixtures.
 - [x] `pkgin` — repository updates, full upgrades, package install/removal/upgrades, fact parsing,
   and all reference fixtures.
-- [ ] **Missing** `pnpm`
+- [x] `pnpm` — global and project packages, scoped/pinned packages, development dependencies,
+  lockfile-based installation, script execution, all three facts, and all reference fixtures.
 - [ ] **Missing** `postgres`
 - [ ] **Missing** `postgresql`
 - [ ] **Missing** `puppet`
@@ -110,7 +113,8 @@ must not be updated from estimates alone.
 - [ ] **Missing** `selinux`
 - [ ] **Partial** `server` — shell, wait, kill, hostname, groups, users, sysctl, locales, and security
   limits exist; the rest of the server catalog remains.
-- [ ] **Missing** `snap`
+- [x] `snap` — package installation/removal, classic confinement, channel refreshes, both facts, and
+  all reference fixtures.
 - [ ] **Missing** `ssh`
 - [ ] **Missing** `supervisorctl`
 - [ ] **Partial** `systemd` — service convergence exists; remaining operations and full fixtures
@@ -139,7 +143,7 @@ must not be updated from estimates alone.
 - [ ] **Missing** `docker`
 - [ ] **Missing** `efibootmgr`
 - [ ] **Partial** `files`
-- [ ] **Missing** `flatpak`
+- [x] `flatpak`
 - [ ] **Missing** `freebsd`
 - [x] `gem`
 - [ ] **Partial** `git`
@@ -155,10 +159,10 @@ must not be updated from estimates alone.
 - [x] `opkg`
 - [x] `pacman`
 - [ ] **Partial** `pip`
-- [ ] **Missing** `pipx`
+- [x] `pipx`
 - [x] `pkg`
 - [x] `pkgin`
-- [ ] **Missing** `pnpm`
+- [x] `pnpm`
 - [ ] **Missing** `podman`
 - [ ] **Missing** `postgres`
 - [ ] **Missing** `postgresql`
@@ -166,7 +170,7 @@ must not be updated from estimates alone.
 - [ ] **Missing** `runit`
 - [ ] **Missing** `selinux`
 - [ ] **Partial** `server`
-- [ ] **Missing** `snap`
+- [x] `snap`
 - [ ] **Missing** `supervisorctl`
 - [ ] **Partial** `systemd`
 - [ ] **Missing** `sysvinit`
