@@ -16,6 +16,7 @@ pub mod opkg;
 pub(crate) mod packages;
 pub mod pacman;
 pub mod pip;
+pub mod pkg;
 pub mod pkgin;
 pub mod rpm;
 pub mod server;

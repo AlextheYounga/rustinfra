@@ -22,6 +22,7 @@ mod order;
 mod packages;
 pub mod pacman;
 pub mod pip;
+pub mod pkg;
 pub mod pkgin;
 mod prepared_runner;
 mod retry;
