@@ -17,6 +17,7 @@ pub mod git;
 pub mod go;
 pub mod iptables;
 pub mod npm;
+pub mod opkg;
 mod order;
 mod packages;
 pub mod pip;

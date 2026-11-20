@@ -12,6 +12,7 @@ pub mod git;
 pub mod go;
 pub mod iptables;
 pub mod npm;
+pub mod opkg;
 pub(crate) mod packages;
 pub mod pip;
 pub mod pkgin;
