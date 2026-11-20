@@ -34,6 +34,7 @@ pub mod supervisorctl;
 pub mod systemd;
 pub mod sysvinit;
 pub mod upstart;
+pub mod uv;
 pub mod xbps;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};

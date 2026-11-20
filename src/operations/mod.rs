@@ -44,6 +44,7 @@ pub mod supervisorctl;
 pub mod systemd;
 pub mod sysvinit;
 pub mod upstart;
+pub mod uv;
 pub mod xbps;
 
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
