@@ -12,6 +12,7 @@ pub mod dnf;
 pub mod files;
 pub mod git;
 mod order;
+pub mod pip;
 mod prepared_runner;
 mod retry;
 mod runtime;
