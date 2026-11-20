@@ -1,5 +1,27 @@
 # Parity status
 
+## 85% capability milestone
+
+Rustinfra has reached the 85% product-capability milestone. This remains a measure of complete,
+runnable infrastructure workflows rather than a claim that 85% of pyinfra's operation and fact
+names have been translated.
+
+In addition to the 75% application-deployment foundation, this milestone adds:
+
+- Named or command-identified crontab entries with user selection, standard and special schedules,
+  list-valued fields, safe updates/removal, comments, and execution-time no-op detection.
+- Python virtual environments using either `virtualenv` or the standard `venv` module, plus typed
+  PEP 508-aware pip package, version, upgrade, removal, and requirements-file handling.
+- Legacy APT `.list` repositories and modern deb822 `.sources` files, including multi-URI/suite
+  parsing, architecture and `Signed-By` fields, custom filenames, removal, and content convergence.
+- IPv4 and IPv6 iptables chains and rules, including policies, insertion/append/removal, negated
+  filters, extension arguments, comments, ports, NAT targets, validation, and shell-safe values.
+- Locale enablement/disablement and security-limit convergence through the existing typed fact and
+  line-editing boundaries.
+
+The milestone is covered by 123 unit and integration tests, the clean-code guards, the persistent
+SSH integration test, and the runnable local deploy example.
+
 ## 75% capability milestone
 
 Rustinfra has reached the 75% product-capability milestone. As with the 50% milestone below, this
@@ -60,19 +82,23 @@ convergence and a persistent SSH integration test.
 
 ## Implemented operation areas
 
-- `server`: shell, wait, kill, hostname, group, user, and sysctl.
+- `server`: shell, wait, kill, hostname, group, user, sysctl, locale, and security limits.
 - `systemd`: service state, enablement, daemon reload, and user/machine scopes.
 - `files`: file, directory, link, put, get, template, line, and unarchive.
-- `apt`: package installation, removal, version convergence, updates, and common controls.
+- `apt`: package installation, removal, version convergence, updates, legacy repositories, and
+  modern deb822 sources.
 - `dnf`: package installation, removal, version convergence, updates, cleaning, and latest packages.
 - `git`: repository clone, update, checkout, remote reconciliation, and submodules.
+- `crontab`: named and command-identified scheduled jobs for system users.
+- `pip`: virtual environments, packages, versions, upgrades, and requirements files.
+- `iptables`: IPv4/IPv6 chains, policies, filter rules, extensions, and NAT targets.
 
 ## Remaining work toward full parity
 
-The 75% milestone is not full pyinfra compatibility. Major remaining areas include:
+The 85% milestone is not full pyinfra compatibility. Major remaining areas include:
 
-- The remainder of the operation and fact catalog, including non-systemd init systems, package
-  repositories, databases, language package managers, firewalls, and additional system settings.
+- The remainder of the operation and fact catalog, including non-systemd init systems, repository
+  signing-key management, databases, additional language package managers, and system settings.
 - Preparation-time change prediction and richer no-op/change reporting.
 - Callbacks/events, progress rendering, machine-readable output, and full CLI behavior.
 - Additional connectors such as Docker/Podman, chroot, and external connector extensibility.

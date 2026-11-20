@@ -42,6 +42,6 @@ Run the included example with:
 cargo run --example local_deploy
 ```
 
-The translation has reached the documented 75% product-capability milestone and remains in
+The translation has reached the documented 85% product-capability milestone and remains in
 progress. See `PARITY.md` for the milestone definition and remaining work, and `CONTEXT.md` and
 `AGENTS.md` for compatibility requirements and architecture rules.
