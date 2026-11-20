@@ -2,6 +2,7 @@ use crate::api::{Command, CommandBit, StringCommand, remote_temporary_filename};
 use crate::connectors::Connector;
 use crate::facts::crontab::{Crontab as CrontabFact, CrontabFile, CrontabInput as CrontabFactInput, CrontabItem};
 use crate::facts::{FactExecutor, FactOptions};
+use crate::operations::files::escape_sed;
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
@@ -242,7 +243,7 @@ fn escape_basic_regex(value: &str) -> String {
 }
 
 fn escape_sed_delimiter(value: &str) -> String {
-    value.replace('/', "\\/")
+    escape_sed(value)
 }
 
 fn escape_sed_replacement(value: &str) -> String {

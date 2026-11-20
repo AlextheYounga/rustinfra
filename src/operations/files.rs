@@ -16,6 +16,7 @@ mod put;
 mod template;
 mod unarchive;
 pub use get::{Get, GetInput};
+pub(crate) use line::escape_sed;
 pub use line::{Line, LineBackup, LineInput};
 pub use link::{Link, LinkInput};
 pub use put::{Put, PutInput};

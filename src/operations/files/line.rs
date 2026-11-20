@@ -205,7 +205,7 @@ fn strip_regex_anchors(value: &str) -> String {
     if value.ends_with('$') && !value.ends_with("\\$") { value[..value.len() - 1].to_owned() } else { value.to_owned() }
 }
 
-fn escape_sed(value: &str) -> String {
+pub(crate) fn escape_sed(value: &str) -> String {
     value.replace('/', "\\/")
 }
 
