@@ -3,6 +3,7 @@
 pub mod apk;
 pub mod apt;
 pub mod brew;
+pub mod bsdinit;
 pub mod cargo;
 pub mod choco;
 pub mod crontab;
@@ -15,6 +16,7 @@ pub mod git;
 pub mod go;
 pub mod iptables;
 pub mod npm;
+pub mod openrc;
 pub mod opkg;
 pub(crate) mod packages;
 pub mod pacman;
@@ -24,9 +26,12 @@ pub mod pkg;
 pub mod pkgin;
 pub mod pnpm;
 pub mod rpm;
+pub mod runit;
 pub mod server;
 pub mod snap;
 pub mod systemd;
+pub mod sysvinit;
+pub mod upstart;
 pub mod xbps;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};

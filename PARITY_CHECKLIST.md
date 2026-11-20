@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 64 operations.
+- **Rust operation surface:** approximately 73 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 75 facts.
+- **Rust fact surface:** approximately 86 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -66,7 +66,8 @@ must not be updated from estimates alone.
   operations are outstanding.
 - [x] `brew` — formula and cask convergence across old/new CLIs, repository updates, upgrades, taps,
   trust state, JSON/legacy package facts, shell-safe values, and all reference fixtures.
-- [ ] **Missing** `bsdinit`
+- [x] `bsdinit` — service control, OpenBSD and FreeBSD boot enablement, rc.conf enablement for other
+  BSDs, shell-safe service names, all three facts, and all reference fixtures.
 - [x] `cargo` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
   fixtures.
 - [x] `choco` — Chocolatey installation, package convergence and upgrades, both facts, and all
@@ -75,8 +76,8 @@ must not be updated from estimates alone.
 - [ ] **Partial** `dnf` — package convergence exists; keys, repositories, and remaining operations
   are outstanding.
 - [ ] **Missing** `docker`
-- [ ] **Partial** `files` — core state, transfers, templates, line editing, and archives exist;
-  remaining file operations are outstanding.
+- [ ] **Partial** `files` — core state, transfers, templates, line editing, archives, and link
+  discovery exist; remaining file operations are outstanding.
 - [x] `flatpak` — system/user package installation and removal, optional remotes, package metadata,
   package listings, shell-safe values, and all reference fixtures.
 - [x] `gem` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
@@ -91,7 +92,8 @@ must not be updated from estimates alone.
 - [ ] **Missing** `mysql`
 - [x] `npm` — global and directory package install, removal, upgrades, pinned versions, fact
   parsing, shell-safe directories, and all reference fixtures.
-- [ ] **Missing** `openrc`
+- [x] `openrc` — service control, per-runlevel enablement, both facts, shell-safe service and
+  runlevel values, and all reference fixtures.
 - [x] `opkg` — repository updates, package install/removal/upgrades, pinning validation,
   configuration, feeds, architectures, installed and upgradeable package facts, and all reference
   fixtures.
@@ -111,18 +113,21 @@ must not be updated from estimates alone.
 - [ ] **Missing** `postgresql`
 - [ ] **Missing** `puppet`
 - [ ] **Missing** `python`
-- [ ] **Missing** `runit`
+- [x] `runit` — management links, automatic-start state, runsv readiness, service control,
+  alternative service/source directories, both facts, and all reference fixtures.
 - [ ] **Missing** `selinux`
-- [ ] **Partial** `server` — shell, wait, kill, hostname, groups, users, sysctl, locales, and security
-  limits exist; the rest of the server catalog remains.
+- [ ] **Partial** `server` — shell, wait, kill, hostname, Linux distribution, groups, users, sysctl,
+  locales, and security limits exist; the rest of the server catalog remains.
 - [x] `snap` — package installation/removal, classic confinement, channel refreshes, both facts, and
   all reference fixtures.
 - [ ] **Missing** `ssh`
 - [ ] **Missing** `supervisorctl`
 - [ ] **Partial** `systemd` — service convergence exists; remaining operations and full fixtures
   remain.
-- [ ] **Missing** `sysvinit`
-- [ ] **Missing** `upstart`
+- [x] `sysvinit` — service control, distribution-specific boot enablement, explicit runlevel links,
+  status parsing, shell-safe values, and all reference fixtures.
+- [x] `upstart` — service control, idempotent override-file enablement, status parsing, shell-safe
+  service names, and all reference fixtures.
 - [ ] **Missing** `uv`
 - [ ] **Missing** `vzctl`
 - [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
@@ -136,7 +141,7 @@ must not be updated from estimates alone.
 - [x] `apk`
 - [ ] **Partial** `apt`
 - [x] `brew`
-- [ ] **Missing** `bsdinit`
+- [x] `bsdinit`
 - [x] `cargo`
 - [x] `choco`
 - [ ] **Partial** `crontab`
@@ -157,7 +162,7 @@ must not be updated from estimates alone.
 - [ ] **Missing** `lxd`
 - [ ] **Missing** `mysql`
 - [x] `npm`
-- [ ] **Missing** `openrc`
+- [x] `openrc`
 - [x] `opkg`
 - [x] `pacman`
 - [ ] **Partial** `pip`
@@ -169,14 +174,14 @@ must not be updated from estimates alone.
 - [ ] **Missing** `postgres`
 - [ ] **Missing** `postgresql`
 - [ ] **Partial** `rpm`
-- [ ] **Missing** `runit`
+- [x] `runit`
 - [ ] **Missing** `selinux`
 - [ ] **Partial** `server`
 - [x] `snap`
 - [ ] **Missing** `supervisorctl`
 - [ ] **Partial** `systemd`
-- [ ] **Missing** `sysvinit`
-- [ ] **Missing** `upstart`
+- [x] `sysvinit`
+- [x] `upstart`
 - [ ] **Missing** `uv`
 - [ ] **Missing** `vzctl`
 - [x] `xbps`
@@ -201,14 +206,15 @@ must not be updated from estimates alone.
 
 - [ ] **Partial** Debian and Ubuntu package, service, user, file, and repository workflows.
 - [ ] **Partial** Fedora/RHEL-family package, service, user, and file workflows.
-- [ ] **Missing** Alpine Linux qualification.
+- [ ] **Partial** Alpine Linux package and OpenRC service workflows.
 - [ ] **Missing** Arch Linux qualification.
 - [ ] **Missing** SUSE qualification.
 - [ ] **Partial** FreeBSD behavior.
-- [ ] **Missing** OpenBSD behavior.
-- [ ] **Missing** Other BSD behavior represented by reference fixtures.
+- [ ] **Partial** OpenBSD package and rc.d service workflows.
+- [ ] **Partial** Other BSD rc.d behavior represented by reference fixtures.
 - [ ] **Missing** macOS behavior.
-- [ ] **Missing** Non-systemd init systems.
+- [ ] **Partial** Non-systemd init systems; BSD init, OpenRC, runit, SysV init, and Upstart are
+  covered, while launchd and supervisorctl remain outstanding.
 
 ## Verification gates
 

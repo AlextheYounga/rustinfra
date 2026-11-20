@@ -5,8 +5,10 @@ use crate::api::{CommandBit, StringCommand};
 
 use super::Fact;
 
+mod linux_distribution;
 mod sysctl;
 mod users;
+pub use linux_distribution::{LinuxDistribution, LinuxDistributionInfo};
 pub use sysctl::{Sysctl, SysctlInput, SysctlValue};
 pub use users::{UserInfo, Users};
 
