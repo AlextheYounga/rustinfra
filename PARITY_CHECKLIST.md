@@ -19,7 +19,7 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Estimated strict parity:** 25–30%.
+- **Estimated strict parity:** 30–35%.
 - **Rust operation surface:** approximately 47 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
