@@ -19,26 +19,24 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 92 operations.
-- **Reference operation surface:** 186 source operations across 47 modules; the committed symbol
-  ledger remains to be generated.
-- **Rust fact surface:** approximately 98 fixture-backed facts.
-- **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
-  manifest remains to be frozen.
+- **Defensible pyinfra experience parity:** 50%.
+- **Measured built-in catalog surface:** 190/380 symbols (50.00%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 92/186 source operations across 47 reference modules.
+- **Rust fact surface:** 98/194 fixture-backed facts across 50 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
-These counts are provisional until the generated symbol ledger below exists. Progress percentages
-must not be updated from estimates alone.
+The experience estimate combines the exact catalog measurement with the qualified runtime and
+connector foundation. It is not a claim of strict behavioral parity for every present symbol;
+remaining fixture mapping and known-deviation accounting stay explicit below.
 
 ## Parity accounting
 
-- [ ] **Missing** Generate and commit the authoritative operation symbol ledger from `cd95d5a3`.
-- [ ] **Missing** Generate and commit the authoritative fact symbol ledger from `cd95d5a3`.
+- [x] Generate and commit the authoritative operation symbol ledger from `cd95d5a3`.
+- [x] Generate and commit the authoritative fixture-backed fact symbol ledger from `cd95d5a3`.
 - [ ] **Missing** Map every reference fixture to implemented, excluded, or blocked status.
 - [ ] **Missing** Record every known behavioral deviation with its disposition.
-- [ ] **Missing** Add a deterministic parity report that calculates coverage from the ledgers.
+- [x] Add a deterministic parity report that calculates coverage from the ledgers.
 - [ ] **Missing** Prevent CI from accepting unclassified built-in operations, facts, or fixtures.
 
 ## Runtime and execution semantics
