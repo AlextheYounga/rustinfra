@@ -18,5 +18,6 @@ pub mod pkgin;
 pub mod rpm;
 pub mod server;
 pub mod systemd;
+pub mod xbps;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};

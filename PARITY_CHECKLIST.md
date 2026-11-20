@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 25–30%.
-- **Rust operation surface:** approximately 38 operations.
+- **Rust operation surface:** approximately 41 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 49 facts.
+- **Rust fact surface:** approximately 51 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -115,7 +115,8 @@ must not be updated from estimates alone.
 - [ ] **Missing** `upstart`
 - [ ] **Missing** `uv`
 - [ ] **Missing** `vzctl`
-- [ ] **Missing** `xbps`
+- [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
+  self-updates, both facts, and all reference fixtures.
 - [ ] **Missing** `yum`
 - [ ] **Missing** `zfs`
 - [ ] **Missing** `zypper`
@@ -168,7 +169,7 @@ must not be updated from estimates alone.
 - [ ] **Missing** `upstart`
 - [ ] **Missing** `uv`
 - [ ] **Missing** `vzctl`
-- [ ] **Missing** `xbps`
+- [x] `xbps`
 - [ ] **Missing** `yum`
 - [ ] **Missing** `zfs`
 - [ ] **Missing** `zypper`
