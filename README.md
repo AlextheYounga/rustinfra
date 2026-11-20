@@ -60,5 +60,6 @@ Today, rustinfra covers the deploy runtime and SSH foundation, filesystem conver
 RPM packages, systemd, users, templates, line editing, sysctl, Git, archive extraction, cron, pip
 environments, APT sources, iptables, locales, and security limits.
 
-For the exact milestone definition and open gaps, read [PARITY.md](PARITY.md). For compatibility
-rules and architecture, see [CONTEXT.md](CONTEXT.md) and [AGENTS.md](AGENTS.md).
+For the milestone definitions, read [PARITY.md](PARITY.md). Track the work toward strict behavioral
+and feature parity in [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md). Compatibility rules and
+architecture live in [CONTEXT.md](CONTEXT.md) and [AGENTS.md](AGENTS.md).

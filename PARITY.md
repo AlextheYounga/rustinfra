@@ -1,5 +1,9 @@
 # Parity status
 
+The actionable work list and strict parity accounting live in
+[PARITY_CHECKLIST.md](PARITY_CHECKLIST.md). The percentage milestones below measure product
+capability, not full catalog parity.
+
 ## 85% capability milestone
 
 Rustinfra has reached the 85% product-capability milestone. This remains a measure of complete,
