@@ -1,5 +1,6 @@
 //! Typed, read-only queries against target hosts.
 
+pub mod apt;
 pub mod crontab;
 pub mod deb;
 mod executor;

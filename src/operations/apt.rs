@@ -9,6 +9,9 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+mod repo;
+pub use repo::{Repo, RepoInput, SourcesFile, SourcesFileInput};
+
 const APT_PREFIX: &str = "DEBIAN_FRONTEND=noninteractive apt-get -y";
 
 #[derive(Clone, Debug, Eq, PartialEq)]
