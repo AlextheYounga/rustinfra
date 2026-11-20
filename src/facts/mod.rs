@@ -15,6 +15,7 @@ pub mod gem;
 pub mod git;
 pub mod go;
 pub mod iptables;
+pub mod launchd;
 pub mod npm;
 pub mod openrc;
 pub mod opkg;

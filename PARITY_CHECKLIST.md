@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 30–35%.
-- **Rust operation surface:** approximately 91 operations.
-- **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
-  the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 97 fixture-backed facts.
+- **Rust operation surface:** approximately 92 operations.
+- **Reference operation surface:** 186 source operations across 47 modules; the committed symbol
+  ledger remains to be generated.
+- **Rust fact surface:** approximately 98 fixture-backed facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -87,7 +87,8 @@ must not be updated from estimates alone.
   all reference fixtures.
 - [ ] **Missing** `gpg`
 - [ ] **Partial** `iptables` — chains and rules exist; complete fixture qualification is outstanding.
-- [ ] **Missing** `launchd`
+- [x] `launchd` — start, stop, restart-by-stop/start, status parsing, shell-safe service names, and
+  all reference fixtures.
 - [ ] **Missing** `lxd`
 - [ ] **Missing** `mysql`
 - [x] `npm` — global and directory package install, removal, upgrades, pinned versions, fact
@@ -162,7 +163,7 @@ must not be updated from estimates alone.
 - [ ] **Missing** `gpg`
 - [ ] **Missing** `hardware`
 - [ ] **Partial** `iptables`
-- [ ] **Missing** `launchd`
+- [x] `launchd`
 - [ ] **Missing** `lxd`
 - [ ] **Missing** `mysql`
 - [x] `npm`
@@ -217,8 +218,8 @@ must not be updated from estimates alone.
 - [ ] **Partial** OpenBSD package and rc.d service workflows.
 - [ ] **Partial** Other BSD rc.d behavior represented by reference fixtures.
 - [ ] **Missing** macOS behavior.
-- [ ] **Partial** Non-systemd init systems; BSD init, OpenRC, runit, SysV init, Upstart, and
-  supervisorctl are covered, while launchd remains outstanding.
+- [x] Non-systemd init systems represented by the reference catalog: BSD init, launchd, OpenRC,
+  runit, SysV init, Upstart, and supervisorctl.
 
 ## Verification gates
 
