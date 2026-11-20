@@ -6,6 +6,7 @@ use std::pin::Pin;
 
 pub mod apt;
 mod command_executor;
+pub mod crontab;
 mod deploy;
 pub mod dnf;
 pub mod files;
