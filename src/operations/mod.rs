@@ -20,6 +20,7 @@ pub mod npm;
 pub mod opkg;
 mod order;
 mod packages;
+pub mod pacman;
 pub mod pip;
 pub mod pkgin;
 mod prepared_runner;
