@@ -20,10 +20,10 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Estimated strict parity:** 25–30%.
-- **Rust operation surface:** approximately 32 operations.
+- **Rust operation surface:** approximately 35 operations.
 - **Reference operation surface:** approximately 177 fixture-backed operations across 47 modules;
   the source manifest remains to be frozen.
-- **Rust fact surface:** approximately 47 facts.
+- **Rust fact surface:** approximately 48 facts.
 - **Reference fact surface:** approximately 194 fixture-backed facts across 50 modules; the source
   manifest remains to be frozen.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
@@ -94,7 +94,8 @@ must not be updated from estimates alone.
   qualification remain.
 - [ ] **Missing** `pipx`
 - [ ] **Missing** `pkg`
-- [ ] **Missing** `pkgin`
+- [x] `pkgin` — repository updates, full upgrades, package install/removal/upgrades, fact parsing,
+  and all reference fixtures.
 - [ ] **Missing** `pnpm`
 - [ ] **Missing** `postgres`
 - [ ] **Missing** `postgresql`
@@ -150,7 +151,7 @@ must not be updated from estimates alone.
 - [ ] **Partial** `pip`
 - [ ] **Missing** `pipx`
 - [ ] **Missing** `pkg`
-- [ ] **Missing** `pkgin`
+- [x] `pkgin`
 - [ ] **Missing** `pnpm`
 - [ ] **Missing** `podman`
 - [ ] **Missing** `postgres`

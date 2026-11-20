@@ -19,6 +19,7 @@ pub mod npm;
 mod order;
 mod packages;
 pub mod pip;
+pub mod pkgin;
 mod prepared_runner;
 mod retry;
 mod runtime;

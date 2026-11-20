@@ -13,6 +13,7 @@ pub mod iptables;
 pub mod npm;
 pub(crate) mod packages;
 pub mod pip;
+pub mod pkgin;
 pub mod rpm;
 pub mod server;
 pub mod systemd;
