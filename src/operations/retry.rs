@@ -210,6 +210,8 @@ fn command_description(command: &Command) -> String {
             format!("FileDownloadCommand({}, {})", command.source, command.destination.display())
         }
         Command::Rsync(command) => format!("RsyncCommand({}, {})", command.source.display(), command.destination),
+        Command::Function(command) => format!("FunctionCommand({})", command.name()),
+        Command::Reconnect(command) => format!("ReconnectCommand(timeout={}s)", command.timeout_seconds),
     }
 }
 

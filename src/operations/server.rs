@@ -2,10 +2,21 @@ use crate::api::{Command, CommandBit, StringCommand};
 
 use super::Operation;
 
+mod authorized_keys;
+mod dispatch;
+mod extra;
+mod reboot;
 mod stateful;
 mod sysctl;
 mod system_config;
 mod user;
+pub use authorized_keys::{UserAuthorizedKeys, UserAuthorizedKeysInput};
+pub use dispatch::{Packages, PackagesInput, Service, ServiceInput};
+pub use extra::{
+    EtcHosts, EtcHostsInput, Modprobe, ModprobeInput, Mount, MountInput, Script, ScriptInput, ScriptTemplate,
+    ScriptTemplateInput, Timezone,
+};
+pub use reboot::{Reboot, RebootInput};
 pub use stateful::{Group, GroupInput, Hostname, HostnameFile, HostnameInput};
 pub use sysctl::{Sysctl, SysctlInput};
 pub use system_config::{Locale, LocaleInput, SecurityLimit, SecurityLimitInput};

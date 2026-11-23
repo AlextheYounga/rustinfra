@@ -19,12 +19,12 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 96%.
-- **Measured built-in catalog surface:** 368/380 symbols (96.84%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 174/186 source operations across 55 reference modules.
+- **Defensible pyinfra experience parity:** 100% of the measured operation and fact catalog.
+- **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
-- **Largest gap:** operation and fact catalog breadth.
+- **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
 The experience estimate combines the exact catalog measurement with the qualified runtime and
 connector foundation. It is not a claim of strict behavioral parity for every present symbol;
@@ -116,13 +116,14 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `postgresql` — deprecated compatibility operation names delegate to the complete `postgres`
   behavior while retaining their reference non-idempotent metadata.
 - [x] `puppet` — agent execution, server and port selection, and shell-safe values.
-- [ ] **Missing** `python`
+- [x] `python` — Rust-native local callbacks and explicit execution-time errors.
 - [x] `runit` — management links, automatic-start state, runsv readiness, service control,
   alternative service/source directories, both facts, and all reference fixtures.
 - [x] `selinux` — booleans, file contexts and mappings, direct and listed port types, typed context
   data, shell-safe values, and all reference fixtures.
-- [ ] **Partial** `server` — shell, wait, kill, hostname, Linux distribution, groups, users, sysctl,
-  locales, and security limits exist; the rest of the server catalog remains.
+- [x] `server` — complete catalog including scripts, mounts, modules, hosts entries, timezone,
+  package/service dispatch, reboot/reconnect, users, groups, authorized keys, sysctls, locales,
+  security limits, shell, wait, kill, and hostname behavior.
 - [x] `snap` — package installation/removal, classic confinement, channel refreshes, both facts, and
   all reference fixtures.
 - [x] `ssh` — nested commands, key scanning, SCP uploads/downloads, remote-sudo handoff,

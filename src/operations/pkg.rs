@@ -9,6 +9,8 @@ use crate::facts::{FactExecutor, FactOptions};
 use super::packages::{PackageCommands, PackagePolicy, converge_packages};
 use super::{StatefulOperation, StatefulOperationFuture};
 
+pub(crate) const PKG_ADD_COMMAND: &str = "pkg_add";
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackagesInput {
     pub packages: Vec<String>,
@@ -69,7 +71,8 @@ fn package_commands(
     is_pkg: bool,
     pkg_path: Option<&str>,
 ) -> Vec<Command> {
-    let mut install = if is_pkg { vec![CommandBit::from("pkg install -y")] } else { vec![CommandBit::from("pkg_add")] };
+    let mut install =
+        if is_pkg { vec![CommandBit::from("pkg install -y")] } else { vec![CommandBit::from(PKG_ADD_COMMAND)] };
     if let Some(path) = pkg_path {
         install.insert(
             0,

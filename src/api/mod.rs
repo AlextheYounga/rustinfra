@@ -32,7 +32,8 @@ mod state;
 mod value;
 
 pub use command::{
-    Command, CommandBit, ContentUploadCommand, FileDownloadCommand, FileUploadCommand, RsyncCommand, StringCommand,
+    Command, CommandBit, ContentUploadCommand, FileDownloadCommand, FileUploadCommand, FunctionCommand,
+    ReconnectCommand, RsyncCommand, StringCommand,
 };
 pub use config::{Config, ConfigState, DEFAULT_TEMP_DIRECTORY};
 pub use inventory::{

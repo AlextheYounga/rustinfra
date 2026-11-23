@@ -41,6 +41,7 @@ pub mod postgres;
 pub mod postgresql;
 mod prepared_runner;
 pub mod puppet;
+pub mod python;
 mod retry;
 mod rpm_manager;
 pub mod runit;

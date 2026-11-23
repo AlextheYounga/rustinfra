@@ -7,6 +7,8 @@ use crate::facts::Fact;
 
 use super::{HomeInput, LinuxDistribution};
 
+pub(crate) const ETC_HOSTS_PATH: &str = "/etc/hosts";
+
 fn quote(value: &str) -> String {
     StringCommand::new([CommandBit::quoted(value)]).raw_value()
 }
@@ -86,7 +88,7 @@ impl Fact for EtcHosts {
         "server.EtcHosts"
     }
     fn command(&self, input: &Option<String>) -> StringCommand {
-        StringCommand::new([format!("cat {} 2>/dev/null || true", quote(input.as_deref().unwrap_or("/etc/hosts")))])
+        StringCommand::new([format!("cat {} 2>/dev/null || true", quote(input.as_deref().unwrap_or(ETC_HOSTS_PATH)))])
     }
     fn default(&self) -> Self::Output {
         IndexMap::new()

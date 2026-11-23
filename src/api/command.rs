@@ -1,5 +1,6 @@
 use std::fmt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use super::HiddenValue;
 
@@ -128,7 +129,50 @@ pub enum Command {
     UploadContent(ContentUploadCommand),
     Download(FileDownloadCommand),
     Rsync(RsyncCommand),
+    Function(FunctionCommand),
+    Reconnect(ReconnectCommand),
 }
+
+/// Execution-time reconnect and uptime check used by `server.reboot`.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReconnectCommand {
+    pub delay_seconds: u64,
+    pub interval_seconds: u64,
+    pub timeout_seconds: u64,
+    pub pre_reboot_uptime: u64,
+    pub kernel: String,
+}
+
+#[derive(Clone)]
+pub struct FunctionCommand {
+    name: String,
+    callback: Arc<dyn Fn() -> Result<(), String> + Send + Sync>,
+}
+
+impl FunctionCommand {
+    #[must_use]
+    pub fn new(name: impl Into<String>, callback: impl Fn() -> Result<(), String> + Send + Sync + 'static) -> Self {
+        Self { name: name.into(), callback: Arc::new(callback) }
+    }
+    pub(crate) fn execute(&self) -> Result<(), String> {
+        (self.callback)()
+    }
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+}
+impl fmt::Debug for FunctionCommand {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.debug_struct("FunctionCommand").field("name", &self.name).finish_non_exhaustive()
+    }
+}
+impl PartialEq for FunctionCommand {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && Arc::ptr_eq(&self.callback, &other.callback)
+    }
+}
+impl Eq for FunctionCommand {}
 
 /// Uploads generated content to a target path.
 #[derive(Clone, Debug, Eq, PartialEq)]
