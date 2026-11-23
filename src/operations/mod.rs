@@ -15,6 +15,7 @@ pub mod crontab;
 mod database;
 mod deploy;
 pub mod dnf;
+pub mod docker;
 pub mod files;
 pub mod flatpak;
 pub mod gem;
