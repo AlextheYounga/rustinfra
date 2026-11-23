@@ -92,7 +92,7 @@ impl StatefulOperation for Build {
                 let facts = FactExecutor::new(connector, options);
                 let mut all = true;
                 for tag in &input.tags {
-                    all &= json_exists(&facts.get(&DockerImage, tag).await?);
+                    all &= json_truthy(&facts.get(&DockerImage, tag).await?);
                 }
                 if all {
                     return Ok(Vec::new());
@@ -226,6 +226,13 @@ fn pairs(bits: &mut Vec<CommandBit>, flag: &str, values: &BTreeMap<String, Strin
         bits.extend([raw(flag), quoted(format!("{key}={value}"))]);
     }
 }
-fn json_exists(value: &serde_json::Value) -> bool {
-    value.as_array().is_some_and(|values| !values.is_empty())
+fn json_truthy(value: &serde_json::Value) -> bool {
+    match value {
+        serde_json::Value::Null => false,
+        serde_json::Value::Bool(value) => *value,
+        serde_json::Value::Number(value) => value.as_f64().is_some_and(|value| value != 0.0),
+        serde_json::Value::String(value) => !value.is_empty(),
+        serde_json::Value::Array(value) => !value.is_empty(),
+        serde_json::Value::Object(value) => !value.is_empty(),
+    }
 }

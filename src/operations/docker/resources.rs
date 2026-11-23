@@ -8,7 +8,7 @@ use crate::facts::docker::{DockerContainer, DockerImage, DockerNetwork, DockerVo
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
-use super::{command, json_exists, optional, pairs, quoted, raw, repeated};
+use super::{command, json_truthy, optional, pairs, quoted, raw, repeated};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ImageInput {
@@ -39,18 +39,22 @@ impl StatefulOperation for Image {
         options: &'a FactOptions,
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
-            let exists = json_exists(&FactExecutor::new(connector, options).get(&DockerImage, &input.image).await?);
-            let latest = !input.image.contains('@')
-                && (!input.image.rsplit('/').next().is_some_and(|name| name.contains(':'))
-                    || input.image.ends_with(":latest"));
-            if input.present && (input.force || latest || !exists) {
-                Ok(command([raw("docker"), raw("image"), raw("pull"), quoted(&input.image)]))
-            } else if !input.present && exists {
-                Ok(command([raw("docker"), raw("image"), raw("rm"), quoted(&input.image)]))
-            } else {
-                Ok(Vec::new())
-            }
+            let value = FactExecutor::new(connector, options).get(&DockerImage, &input.image).await?;
+            Ok(image_commands(input, &value))
         })
+    }
+}
+
+fn image_commands(input: &ImageInput, value: &Value) -> Vec<Command> {
+    let exists = json_truthy(value);
+    let latest = !input.image.contains('@')
+        && (!input.image.rsplit('/').next().is_some_and(|name| name.contains(':')) || input.image.ends_with(":latest"));
+    if input.present && (input.force || latest || !exists) {
+        command([raw("docker"), raw("image"), raw("pull"), quoted(&input.image)])
+    } else if !input.present && exists {
+        command([raw("docker"), raw("image"), raw("rm"), quoted(&input.image)])
+    } else {
+        Vec::new()
     }
 }
 
@@ -85,19 +89,23 @@ impl StatefulOperation for Volume {
         options: &'a FactOptions,
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
-            let exists = json_exists(&FactExecutor::new(connector, options).get(&DockerVolume, &input.volume).await?);
-            if input.present && !exists {
-                let mut bits = vec![raw("docker"), raw("volume"), raw("create"), quoted(&input.volume)];
-                optional(&mut bits, "-d", input.driver.as_deref());
-                repeated(&mut bits, "--label", &input.labels);
-                repeated(&mut bits, "--opt", &input.options);
-                Ok(command(bits))
-            } else if !input.present && exists {
-                Ok(command([raw("docker"), raw("volume"), raw("rm"), quoted(&input.volume)]))
-            } else {
-                Ok(Vec::new())
-            }
+            let value = FactExecutor::new(connector, options).get(&DockerVolume, &input.volume).await?;
+            Ok(volume_commands(input, &value))
         })
+    }
+}
+
+fn volume_commands(input: &VolumeInput, value: &Value) -> Vec<Command> {
+    if input.present && !json_truthy(value) {
+        let mut bits = vec![raw("docker"), raw("volume"), raw("create"), quoted(&input.volume)];
+        optional(&mut bits, "-d", input.driver.as_deref());
+        repeated(&mut bits, "--label", &input.labels);
+        repeated(&mut bits, "--opt", &input.options);
+        command(bits)
+    } else if !input.present && !value.is_null() {
+        command([raw("docker"), raw("volume"), raw("rm"), quoted(&input.volume)])
+    } else {
+        Vec::new()
     }
 }
 
@@ -156,32 +164,36 @@ impl StatefulOperation for Network {
         options: &'a FactOptions,
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
-            let exists = json_exists(&FactExecutor::new(connector, options).get(&DockerNetwork, &input.network).await?);
-            if input.present && !exists {
-                let mut bits = vec![raw("docker"), raw("network"), raw("create"), quoted(&input.network)];
-                optional(&mut bits, "-d", input.driver.as_deref());
-                optional(&mut bits, "--gateway", input.gateway.as_deref());
-                optional(&mut bits, "--ip-range", input.ip_range.as_deref());
-                optional(&mut bits, "--ipam-driver", input.ipam_driver.as_deref());
-                optional(&mut bits, "--subnet", input.subnet.as_deref());
-                optional(&mut bits, "--scope", input.scope.as_deref());
-                if input.ingress {
-                    bits.push(raw("--ingress"));
-                }
-                if input.attachable {
-                    bits.push(raw("--attachable"));
-                }
-                pairs(&mut bits, "--aux-address", &input.aux_addresses);
-                repeated(&mut bits, "--opt", &input.options);
-                repeated(&mut bits, "--ipam-opt", &input.ipam_options);
-                repeated(&mut bits, "--label", &input.labels);
-                Ok(command(bits))
-            } else if !input.present && exists {
-                Ok(command([raw("docker"), raw("network"), raw("rm"), quoted(&input.network)]))
-            } else {
-                Ok(Vec::new())
-            }
+            let value = FactExecutor::new(connector, options).get(&DockerNetwork, &input.network).await?;
+            Ok(network_commands(input, &value))
         })
+    }
+}
+
+fn network_commands(input: &NetworkInput, value: &Value) -> Vec<Command> {
+    if input.present && !json_truthy(value) {
+        let mut bits = vec![raw("docker"), raw("network"), raw("create"), quoted(&input.network)];
+        optional(&mut bits, "-d", input.driver.as_deref());
+        optional(&mut bits, "--gateway", input.gateway.as_deref());
+        optional(&mut bits, "--ip-range", input.ip_range.as_deref());
+        optional(&mut bits, "--ipam-driver", input.ipam_driver.as_deref());
+        optional(&mut bits, "--subnet", input.subnet.as_deref());
+        optional(&mut bits, "--scope", input.scope.as_deref());
+        if input.ingress {
+            bits.push(raw("--ingress"));
+        }
+        if input.attachable {
+            bits.push(raw("--attachable"));
+        }
+        pairs(&mut bits, "--aux-address", &input.aux_addresses);
+        repeated(&mut bits, "--opt", &input.options);
+        repeated(&mut bits, "--ipam-opt", &input.ipam_options);
+        repeated(&mut bits, "--label", &input.labels);
+        command(bits)
+    } else if !input.present && !value.is_null() {
+        command([raw("docker"), raw("network"), raw("rm"), quoted(&input.network)])
+    } else {
+        Vec::new()
     }
 }
 
@@ -266,7 +278,7 @@ impl StatefulOperation for Container {
     }
 }
 fn container_commands(input: &ContainerInput, value: &Value) -> Result<Vec<Command>, String> {
-    let exists = json_exists(value);
+    let exists = json_truthy(value);
     let running =
         value.as_array().and_then(|v| v.first()).and_then(|v| v.pointer("/State/Status")).and_then(Value::as_str)
             == Some("running");
