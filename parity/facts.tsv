@@ -92,9 +92,9 @@ iptables.IptablesChains	present
 iptables.IptablesRules	present
 launchd.LaunchdStatus	present
 lxd.LxdContainers	missing
-mysql.MysqlDatabases	missing
-mysql.MysqlUserGrants	missing
-mysql.MysqlUsers	missing
+mysql.MysqlDatabases	present
+mysql.MysqlUserGrants	present
+mysql.MysqlUsers	present
 npm.NpmPackages	present
 openrc.OpenrcEnabled	present
 openrc.OpenrcStatus	present
@@ -121,8 +121,8 @@ podman.PodmanPs	present
 podman.PodmanQuadlets	present
 podman.PodmanSystemInfo	present
 podman.PodmanVolumes	present
-postgresql.PostgresqlDatabases	missing
-postgresql.PostgresqlRoles	missing
+postgresql.PostgresqlDatabases	present
+postgresql.PostgresqlRoles	present
 rpm.RpmPackage	missing
 rpm.RpmPackageProvides	missing
 rpm.RpmPackages	present
