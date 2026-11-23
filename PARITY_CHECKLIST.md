@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 65%.
-- **Measured built-in catalog surface:** 247/380 symbols (65.00%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 66%.
+- **Measured built-in catalog surface:** 252/380 symbols (66.32%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 93/186 source operations across 47 reference modules.
-- **Rust fact surface:** 154/194 fixture-backed facts across 51 reference modules.
+- **Rust fact surface:** 159/194 fixture-backed facts across 52 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -135,7 +135,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
   self-updates, both facts, and all reference fixtures.
 - [ ] **Missing** `yum`
-- [ ] **Missing** `zfs`
+- [x] `zfs`
 - [ ] **Missing** `zypper`
 
 ## Fact modules

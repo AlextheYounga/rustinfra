@@ -43,6 +43,7 @@ pub mod sysvinit;
 pub mod upstart;
 pub mod uv;
 pub mod xbps;
+pub mod zfs;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};
 

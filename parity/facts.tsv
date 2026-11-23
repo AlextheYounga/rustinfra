@@ -187,9 +187,9 @@ vzctl.OpenvzContainers	missing
 xbps.XbpsPackages	present
 xbps.XbpsSelfUpdate	present
 yum.YumRepositories	missing
-zfs.Datasets	missing
-zfs.Filesystems	missing
-zfs.Pools	missing
-zfs.Snapshots	missing
-zfs.Volumes	missing
+zfs.Datasets	present
+zfs.Filesystems	present
+zfs.Pools	present
+zfs.Snapshots	present
+zfs.Volumes	present
 zypper.ZypperRepositories	missing
