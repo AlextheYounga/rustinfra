@@ -16,6 +16,7 @@ pub mod freebsd;
 pub mod gem;
 pub mod git;
 pub mod go;
+pub mod gpg;
 pub mod hardware;
 pub mod iptables;
 pub mod launchd;

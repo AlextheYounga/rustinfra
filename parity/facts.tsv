@@ -73,10 +73,10 @@ git.GitRemoteBranchCommit	present
 git.GitTag	present
 git.GitTrackingBranch	missing
 go.GoPackages	present
-gpg.GpgKey	missing
-gpg.GpgKeyrings	missing
-gpg.GpgKeys	missing
-gpg.GpgSecretKeys	missing
+gpg.GpgKey	present
+gpg.GpgKeyrings	present
+gpg.GpgKeys	present
+gpg.GpgSecretKeys	present
 hardware.BlockDevices	present
 hardware.CpuInfo	present
 hardware.Cpus	present

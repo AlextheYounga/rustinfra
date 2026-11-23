@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 54%.
-- **Measured built-in catalog surface:** 206/380 symbols (54.21%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 55%.
+- **Measured built-in catalog surface:** 210/380 symbols (55.26%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 92/186 source operations across 47 reference modules.
-- **Rust fact surface:** 114/194 fixture-backed facts across 50 reference modules.
+- **Rust fact surface:** 118/194 fixture-backed facts across 50 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -158,7 +158,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `gem`
 - [ ] **Partial** `git`
 - [x] `go`
-- [ ] **Missing** `gpg`
+- [x] `gpg`
 - [ ] **Partial** `hardware` — CPU information/count, memory, and block devices are covered;
   network device and address projections remain outstanding.
 - [ ] **Partial** `iptables`
