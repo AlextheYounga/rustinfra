@@ -6,6 +6,8 @@ use crate::api::{CommandBit, IGNORE_STDERR_AND_FAILURE, StringCommand};
 
 use super::Fact;
 
+pub(crate) const GIT_HEAD_REFERENCE: &str = "HEAD";
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct GitRepoInput {
     pub repo: String,
@@ -144,8 +146,22 @@ impl Fact for GitTrackingBranch {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GitConfig;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct GitConfigInput {
+    pub repo: Option<String>,
+    pub system: bool,
+    pub safe_directory: Option<String>,
+}
+
+impl GitConfigInput {
+    #[must_use]
+    pub fn for_repo(repo: impl Into<String>) -> Self {
+        Self { repo: Some(repo.into()), system: false, safe_directory: None }
+    }
+}
+
 impl Fact for GitConfig {
-    type Input = GitRepoInput;
+    type Input = GitConfigInput;
     type Output = IndexMap<String, Vec<String>>;
 
     fn name(&self) -> &'static str {
@@ -153,7 +169,18 @@ impl Fact for GitConfig {
     }
 
     fn command(&self, input: &Self::Input) -> StringCommand {
-        repo_command(input, vec![CommandBit::from("config"), CommandBit::from("--local"), CommandBit::from("-l")])
+        if let Some(repo) = &input.repo {
+            return repo_command(
+                &GitRepoInput { repo: repo.clone(), safe_directory: input.safe_directory.clone() },
+                vec![CommandBit::from("config"), CommandBit::from("--local"), CommandBit::from("-l")],
+            );
+        }
+        StringCommand::new([
+            CommandBit::from("git"),
+            CommandBit::from("config"),
+            CommandBit::from(if input.system { "--system" } else { "--global" }),
+            CommandBit::from("-l"),
+        ])
     }
 
     fn default(&self) -> Self::Output {
@@ -227,7 +254,7 @@ impl Fact for GitRemoteBranchCommit {
             vec![
                 CommandBit::from("ls-remote"),
                 CommandBit::quoted(input.remote.clone()),
-                CommandBit::quoted(input.branch.clone().unwrap_or_else(|| "HEAD".to_owned())),
+                CommandBit::quoted(input.branch.clone().unwrap_or_else(|| GIT_HEAD_REFERENCE.to_owned())),
                 CommandBit::from("2>/dev/null | head -n1"),
             ],
         )
@@ -285,7 +312,7 @@ fn valid_sha(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{Fact, GitBranch, GitConfig, GitLocalCommit, GitRefInput, GitRepoInput};
+    use super::{Fact, GitBranch, GitConfig, GitConfigInput, GitLocalCommit, GitRefInput, GitRepoInput};
 
     #[test]
     fn git_facts_quote_repository_and_parse_reference_shapes() {
@@ -295,8 +322,9 @@ mod tests {
             "! test -d '/srv/my repo' || ( cd '/srv/my repo' && git describe --all )"
         );
         assert_eq!(GitBranch.process(&["heads/main".to_owned()], &input).unwrap().as_deref(), Some("main"));
+        let config_input = GitConfigInput::for_repo("/srv/my repo");
         let config = GitConfig
-            .process(&["remote.origin.url=one".to_owned(), "remote.origin.url=two".to_owned()], &input)
+            .process(&["remote.origin.url=one".to_owned(), "remote.origin.url=two".to_owned()], &config_input)
             .unwrap();
         assert_eq!(config["remote.origin.url"], ["one", "two"]);
 

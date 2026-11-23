@@ -60,10 +60,10 @@ files.template	present
 files.unarchive	present
 flatpak.packages	present
 gem.packages	present
-git.bare_repo	missing
-git.config	missing
+git.bare_repo	present
+git.config	present
 git.repo	present
-git.worktree	missing
+git.worktree	present
 go.packages	present
 gpg.dearmor	present
 gpg.key	present

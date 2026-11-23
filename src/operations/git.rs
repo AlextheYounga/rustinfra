@@ -7,12 +7,15 @@ use crate::api::{Command, CommandBit, StringCommand};
 use crate::connectors::Connector;
 use crate::facts::files::{Directory, PathInfo, PathInput};
 use crate::facts::git::{
-    GitBranch, GitConfig, GitLocalCommit, GitRefInput, GitRemoteBranchCommit, GitRemoteInput, GitRepoInput, GitTag,
-    git_command,
+    GitBranch, GitConfig, GitConfigInput, GitLocalCommit, GitRefInput, GitRemoteBranchCommit, GitRemoteInput,
+    GitRepoInput, GitTag, git_command,
 };
 use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
+
+mod extra;
+pub use extra::{BareRepo, BareRepoInput, Config, ConfigInput, Worktree, WorktreeInput};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RepoInput {
@@ -77,13 +80,22 @@ impl StatefulOperation for Repo {
                 return Err(Box::new(GitOperationError::DestinationNotDirectory { path: input.destination.clone() })
                     as Box<dyn Error + Send + Sync>);
             }
-            let git_directory = format!("{}/.git", input.destination.trim_end_matches('/'));
+            let git_directory = git_metadata_directory(&input.destination);
             let repository = facts.get(&Directory, &PathInput::from(git_directory)).await?;
             let mut state = RepoState { destination, repository, ..RepoState::default() };
             if matches!(state.repository, PathInfo::Present(_)) {
                 let safe_directory = (input.user.is_some() || input.group.is_some()).then(|| input.destination.clone());
                 let repo = GitRepoInput { repo: input.destination.clone(), safe_directory };
-                state.config = facts.get(&GitConfig, &repo).await?;
+                state.config = facts
+                    .get(
+                        &GitConfig,
+                        &GitConfigInput {
+                            repo: Some(repo.repo.clone()),
+                            system: false,
+                            safe_directory: repo.safe_directory.clone(),
+                        },
+                    )
+                    .await?;
                 state.branch = facts.get(&GitBranch, &repo).await?;
                 if input.branch.is_some() {
                     state.tags = facts.get(&GitTag, &repo).await?;
@@ -239,6 +251,10 @@ fn owner(user: Option<&str>, group: Option<&str>) -> Option<String> {
         (None, Some(group)) => Some(group.to_owned()),
         (None, None) => None,
     }
+}
+
+fn git_metadata_directory(path: &str) -> String {
+    format!("{}/.git", path.trim_end_matches('/'))
 }
 
 fn raw(value: impl Into<String>) -> CommandBit {

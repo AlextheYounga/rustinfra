@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 87%.
-- **Measured built-in catalog surface:** 331/380 symbols (87.11%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 137/186 source operations across 55 reference modules.
+- **Defensible pyinfra experience parity:** 88%.
+- **Measured built-in catalog surface:** 334/380 symbols (87.89%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 140/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -80,7 +80,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   package listings, shell-safe values, and all reference fixtures.
 - [x] `gem` — package install, removal, upgrades, pinned versions, fact parsing, and all reference
   fixtures.
-- [ ] **Partial** `git` — repository convergence exists; bare repositories and configuration remain.
+- [x] `git` — repositories, bare repositories, worktrees, local/global/system configuration,
+  branches, tags, tracking, commit convergence, safe directories, ownership, and shell-safe values.
 - [x] `go` — package install, removal, upgrades, pinned versions, binary naming, fact parsing, and
   all reference fixtures.
 - [x] `gpg` — local, URL, and keyserver installs, dearmoring, fingerprint-aware convergence,
