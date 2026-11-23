@@ -2,7 +2,7 @@ use std::error::Error;
 
 use indexmap::IndexMap;
 
-use crate::api::StringCommand;
+use crate::api::{PROCESS_ID_COLUMN_HEADER, StringCommand};
 
 use super::Fact;
 
@@ -35,7 +35,7 @@ impl Fact for LaunchdStatus {
             .filter_map(|line| {
                 let mut fields = line.split_whitespace();
                 let pid = fields.next()?;
-                if pid == "PID" {
+                if pid == PROCESS_ID_COLUMN_HEADER {
                     return None;
                 }
                 fields.next()?;

@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::api::{Data, HiddenValue, SSH_HOSTNAME_DATA_KEY};
+use crate::api::{Data, HiddenValue, SSH_HOSTNAME_DATA_KEY, USER_NAME_IDENTIFIER};
 
 use super::config;
 
@@ -99,7 +99,7 @@ impl SshConnectionOptions {
         let port = u16::try_from(port_value).map_err(|_| SshOptionsError::InvalidPort(port_value))?;
         let user = match optional_string(data, "ssh_user")?.or_else(|| resolved.as_ref()?.user.as_deref()) {
             Some(user) if !user.is_empty() => user.to_owned(),
-            _ => env::var("USER").map_err(|_| SshOptionsError::MissingUser)?,
+            _ => env::var(USER_NAME_IDENTIFIER).map_err(|_| SshOptionsError::MissingUser)?,
         };
         let policy = optional_string(data, "ssh_strict_host_key_checking")?
             .or_else(|| unsupported_value(resolved.as_ref(), "stricthostkeychecking"))

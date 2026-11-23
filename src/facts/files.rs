@@ -6,8 +6,10 @@ use super::Fact;
 
 mod find;
 mod find_links;
+mod search;
 pub use find::{FindInFile, FindInFileInput};
 pub use find_links::{FindLinks, FindLinksInput};
+pub use search::{Block, BlockInput, FindDirectories, FindFiles, FindInput, Flags};
 
 const LINUX_STAT_COMMAND: &str = "stat -c 'user=%U group=%G mode=%A atime=%X mtime=%Y ctime=%Z size=%s %N'";
 const BSD_STAT_COMMAND: &str = "stat -f 'user=%Su group=%Sg mode=%Sp atime=%a mtime=%m ctime=%c size=%z %N%SY'";

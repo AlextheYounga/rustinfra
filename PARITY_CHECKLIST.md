@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 72%.
-- **Measured built-in catalog surface:** 275/380 symbols (72.37%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 75%.
+- **Measured built-in catalog surface:** 285/380 symbols (75.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 93/186 source operations across 47 reference modules.
-- **Rust fact surface:** 182/194 fixture-backed facts across 59 reference modules.
+- **Rust fact surface:** 192/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -151,7 +151,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `dnf`
 - [x] `docker`
 - [x] `efibootmgr`
-- [ ] **Partial** `files`
+- [x] `files`
 - [x] `flatpak`
 - [x] `freebsd`
 - [x] `gem`
