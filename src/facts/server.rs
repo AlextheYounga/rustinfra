@@ -6,6 +6,7 @@ use crate::api::{CommandBit, StringCommand};
 use super::Fact;
 
 mod linux_distribution;
+mod login_history;
 mod ports;
 mod processes;
 mod storage;
@@ -13,6 +14,7 @@ mod sysctl;
 mod system;
 mod users;
 pub use linux_distribution::{LinuxDistribution, LinuxDistributionInfo};
+pub use login_history::{Last, LastRecord, Lastb};
 pub use ports::{ListeningPort, NetworkProtocol, NetworkTool, Port, PortInput, PortProcess, Ports, PortsInput};
 pub use processes::{ProcessInfo, ProcessPlatform, Processes, ProcessesInput};
 pub use storage::{Date, KernelModuleInfo, KernelModules, MountInfo, Mounts, ServerKernel};

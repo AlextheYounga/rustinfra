@@ -143,8 +143,8 @@ server.HasGui	present
 server.Home	present
 server.Hostname	present
 server.KernelModules	present
-server.Last	missing
-server.Lastb	missing
+server.Last	present
+server.Lastb	present
 server.LinuxDistribution	present
 server.LinuxGui	present
 server.LinuxName	present
