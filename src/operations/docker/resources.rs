@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use crate::api::Command;
 use crate::connectors::Connector;
-use crate::facts::docker::{DockerContainer, DockerImage, DockerNetwork, DockerPlugin, DockerVolume};
+use crate::facts::docker::{DockerContainer, DockerImage, DockerNetwork, DockerVolume};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
@@ -317,78 +317,6 @@ fn container_commands(input: &ContainerInput, value: &Value) -> Result<Vec<Comma
         out.extend(command([raw("docker"), raw("container"), raw("stop"), quoted(&input.container)]));
     }
     Ok(out)
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PluginInput {
-    pub plugin: String,
-    pub alias: Option<String>,
-    pub present: bool,
-    pub enabled: bool,
-    pub options: BTreeMap<String, String>,
-}
-impl PluginInput {
-    #[must_use]
-    pub fn new(plugin: impl Into<String>) -> Self {
-        Self { plugin: plugin.into(), alias: None, present: true, enabled: true, options: BTreeMap::new() }
-    }
-}
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Plugin;
-impl StatefulOperation for Plugin {
-    type Input = PluginInput;
-    fn name(&self) -> &'static str {
-        "docker.plugin"
-    }
-    fn is_idempotent(&self) -> bool {
-        true
-    }
-    fn commands<'a>(
-        &'a self,
-        input: &'a Self::Input,
-        connector: &'a dyn Connector,
-        options: &'a FactOptions,
-    ) -> StatefulOperationFuture<'a> {
-        Box::pin(async move {
-            let name = input.alias.as_deref().unwrap_or(&input.plugin);
-            let value = FactExecutor::new(connector, options).get(&DockerPlugin, &name.to_owned()).await?;
-            let exists = json_exists(&value);
-            if input.present && !exists {
-                let mut bits = vec![
-                    raw("docker"),
-                    raw("plugin"),
-                    raw("install"),
-                    quoted(&input.plugin),
-                    raw("--grant-all-permissions"),
-                ];
-                optional(&mut bits, "--alias", input.alias.as_deref());
-                if !input.enabled {
-                    bits.push(raw("--disable"));
-                }
-                bits.extend(input.options.iter().map(|(k, v)| quoted(format!("{k}={v}"))));
-                Ok(command(bits))
-            } else if !input.present && exists {
-                Ok(command([raw("docker"), raw("plugin"), raw("rm"), raw("-f"), quoted(name)]))
-            } else {
-                let enabled = value
-                    .as_array()
-                    .and_then(|v| v.first())
-                    .and_then(|v| v.get("Enabled"))
-                    .and_then(Value::as_bool)
-                    .unwrap_or(false);
-                if enabled != input.enabled {
-                    Ok(command([
-                        raw("docker"),
-                        raw("plugin"),
-                        raw(if input.enabled { "enable" } else { "disable" }),
-                        quoted(name),
-                    ]))
-                } else {
-                    Ok(Vec::new())
-                }
-            }
-        })
-    }
 }
 
 #[cfg(test)]

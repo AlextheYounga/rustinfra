@@ -16,6 +16,18 @@ fn inspect_facts_preserve_json_and_quote_object_ids() {
         "ids=$(docker ps -qa) && [ -n \"$ids\" ] && docker container inspect $ids || echo \"[]\""
     );
     assert_eq!(DockerPlugin.command(&"myid".to_owned()).raw_value(), "docker plugin inspect myid 2>&- || true");
+    assert_eq!(
+        DockerImages.command(&()).raw_value(),
+        "ids=$(docker images -q) && [ -n \"$ids\" ] && docker image inspect $ids || echo \"[]\""
+    );
+    assert_eq!(
+        DockerPlugins.command(&()).raw_value(),
+        "ids=$(docker plugin ls -q) && [ -n \"$ids\" ] && docker plugin inspect $ids || echo \"[]\""
+    );
+    let images = DockerImages.process(&[r#"[{"Id":"sha256:img1"}]"#.to_owned()], &()).unwrap();
+    assert_eq!(images[0]["Id"], "sha256:img1");
+    let plugins = DockerPlugins.process(&[r#"[{"Id":"plugin1","Enabled":true}]"#.to_owned()], &()).unwrap();
+    assert_eq!(plugins[0]["Enabled"], true);
 }
 
 #[test]
@@ -62,11 +74,20 @@ fn command_specific_facts_parse_reference_formats() {
     let stats =
         DockerContainerStats.process(&[r#"{"ID":"abc","CPUPerc":"0.01%"}"#.to_owned(), "".to_owned()], &()).unwrap();
     assert_eq!(stats[0]["ID"], "abc");
+    let image = "sha256:img1".to_owned();
+    assert_eq!(
+        DockerImageHistory.command(&image).raw_value(),
+        "docker image history --no-trunc --format '{{json .}}' sha256:img1 2>&- || true"
+    );
+    let history =
+        DockerImageHistory.process(&[r#"{"ID":"sha256:layer1","CreatedBy":"/bin/sh"}"#.to_owned()], &image).unwrap();
+    assert_eq!(history[0]["CreatedBy"], "/bin/sh");
 }
 
 #[test]
 fn docker_auths_returns_keys_and_tolerates_malformed_config() {
     let auths = DockerAuths.process(&[r#"{"auths":{"docker.io":{},"registry:5000":{}}}"#.to_owned()], &()).unwrap();
     assert_eq!(auths, ["docker.io", "registry:5000"]);
+    assert!(DockerAuths.process(&["{}".to_owned()], &()).unwrap().is_empty());
     assert!(DockerAuths.process(&["not json".to_owned()], &()).unwrap().is_empty());
 }

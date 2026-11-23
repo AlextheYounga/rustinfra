@@ -257,14 +257,14 @@ docker.network/add_network_with_gateway.json	unqualified
 docker.network/add_network_with_ip_range.json	unqualified	
 docker.network/add_network_with_opts.json	unqualified	
 docker.network/remove_network.json	unqualified	
-docker.plugin/disable_plugin.json	unqualified	
-docker.plugin/enable_plugin.json	unqualified	
-docker.plugin/install_plugin.json	unqualified	
-docker.plugin/install_plugin_disabled.json	unqualified	
-docker.plugin/install_plugin_with_alias_and_options.json	unqualified	
-docker.plugin/remove_plugin.json	unqualified	
-docker.plugin/set_plugin_options.json	unqualified	
-docker.plugin/set_plugin_options_disabled_plugin.json	unqualified	
+docker.plugin/disable_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/enable_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/install_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/install_plugin_disabled.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/install_plugin_with_alias_and_options.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/remove_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
+docker.plugin/set_plugin_options.json	qualified	src/operations/docker/plugin.rs::plugin_option_changes_disable_set_and_restore_requested_state
+docker.plugin/set_plugin_options_disabled_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_option_changes_disable_set_and_restore_requested_state
 docker.prune/prune_all_and_volumes.json	unqualified	
 docker.prune/prune_default.json	unqualified	
 docker.prune/prune_with_filter.json	unqualified	

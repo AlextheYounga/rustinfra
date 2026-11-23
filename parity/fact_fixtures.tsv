@@ -63,28 +63,28 @@ dnf.DnfEnabledModules/single_module.json	unqualified
 dnf.DnfEnabledModules/with_repo_header.json	unqualified	
 dnf.DnfRepositories/repos-with-spaces.json	unqualified	
 dnf.DnfRepositories/repos.json	unqualified	
-docker.DockerAuths/malformed_config.json	unqualified	
-docker.DockerAuths/no_config_file.json	unqualified	
-docker.DockerAuths/with_auths.json	unqualified	
-docker.DockerContainer/container.json	unqualified	
-docker.DockerContainerEnvs/container.json	unqualified	
-docker.DockerContainerFsChanges/fs_changes.json	unqualified	
-docker.DockerContainerLabels/container.json	unqualified	
-docker.DockerContainerMounts/container.json	unqualified	
-docker.DockerContainerNetworks/container.json	unqualified	
-docker.DockerContainerPorts/container.json	unqualified	
-docker.DockerContainerProcesses/processes.json	unqualified	
-docker.DockerContainerStats/stats.json	unqualified	
-docker.DockerContainers/container.json	unqualified	
-docker.DockerImageHistory/history.json	unqualified	
-docker.DockerImageLabels/image.json	unqualified	
-docker.DockerImageLayers/image.json	unqualified	
-docker.DockerImages/images.json	unqualified	
-docker.DockerNetworkLabels/network.json	unqualified	
-docker.DockerPlugin/plugin.json	unqualified	
-docker.DockerPlugins/plugins.json	unqualified	
-docker.DockerVersion/version.json	unqualified	
-docker.DockerVolumeLabels/volume.json	unqualified	
+docker.DockerAuths/malformed_config.json	qualified	src/facts/docker/tests.rs::docker_auths_returns_keys_and_tolerates_malformed_config
+docker.DockerAuths/no_config_file.json	qualified	src/facts/docker/tests.rs::docker_auths_returns_keys_and_tolerates_malformed_config
+docker.DockerAuths/with_auths.json	qualified	src/facts/docker/tests.rs::docker_auths_returns_keys_and_tolerates_malformed_config
+docker.DockerContainer/container.json	qualified	src/facts/docker/tests.rs::inspect_facts_preserve_json_and_quote_object_ids
+docker.DockerContainerEnvs/container.json	qualified	src/facts/docker/tests.rs::derived_container_facts_handle_values_and_nulls
+docker.DockerContainerFsChanges/fs_changes.json	qualified	src/facts/docker/tests.rs::command_specific_facts_parse_reference_formats
+docker.DockerContainerLabels/container.json	qualified	src/facts/docker/tests.rs::derived_container_facts_handle_values_and_nulls
+docker.DockerContainerMounts/container.json	qualified	src/facts/docker/tests.rs::derived_container_facts_handle_values_and_nulls
+docker.DockerContainerNetworks/container.json	qualified	src/facts/docker/tests.rs::derived_container_facts_handle_values_and_nulls
+docker.DockerContainerPorts/container.json	qualified	src/facts/docker/tests.rs::derived_container_facts_handle_values_and_nulls
+docker.DockerContainerProcesses/processes.json	qualified	src/facts/docker/tests.rs::command_specific_facts_parse_reference_formats
+docker.DockerContainerStats/stats.json	qualified	src/facts/docker/tests.rs::command_specific_facts_parse_reference_formats
+docker.DockerContainers/container.json	qualified	src/facts/docker/tests.rs::inspect_facts_preserve_json_and_quote_object_ids
+docker.DockerImageHistory/history.json	qualified	src/facts/docker/tests.rs::command_specific_facts_parse_reference_formats
+docker.DockerImageLabels/image.json	qualified	src/facts/docker/tests.rs::derived_image_and_storage_facts_match_reference_fallbacks
+docker.DockerImageLayers/image.json	qualified	src/facts/docker/tests.rs::derived_image_and_storage_facts_match_reference_fallbacks
+docker.DockerImages/images.json	qualified	src/facts/docker/tests.rs::inspect_facts_preserve_json_and_quote_object_ids
+docker.DockerNetworkLabels/network.json	qualified	src/facts/docker/tests.rs::derived_image_and_storage_facts_match_reference_fallbacks
+docker.DockerPlugin/plugin.json	qualified	src/facts/docker/tests.rs::inspect_facts_preserve_json_and_quote_object_ids
+docker.DockerPlugins/plugins.json	qualified	src/facts/docker/tests.rs::inspect_facts_preserve_json_and_quote_object_ids
+docker.DockerVersion/version.json	qualified	src/facts/docker/tests.rs::command_specific_facts_parse_reference_formats
+docker.DockerVolumeLabels/volume.json	qualified	src/facts/docker/tests.rs::derived_image_and_storage_facts_match_reference_fallbacks
 efibootmgr.EFIBootMgr/boot_entries.json	unqualified	
 efibootmgr.EFIBootMgr/boot_entries2.json	unqualified	
 efibootmgr.EFIBootMgr/boot_entries_complex.json	unqualified	
