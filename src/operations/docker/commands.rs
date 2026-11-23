@@ -1,9 +1,8 @@
-use std::collections::BTreeMap;
-
 use crate::api::Command;
 use crate::connectors::Connector;
 use crate::facts::FactOptions;
 use crate::operations::{Operation, StatefulOperation, StatefulOperationFuture};
+use indexmap::IndexMap;
 
 use super::{command, optional, pairs, quoted, raw, repeated};
 
@@ -84,7 +83,7 @@ pub struct ContainerExecInput {
     pub command: ExecCommand,
     pub user: Option<String>,
     pub workdir: Option<String>,
-    pub env: BTreeMap<String, String>,
+    pub env: IndexMap<String, String>,
     pub detach: bool,
     pub privileged: bool,
     pub tty: bool,
@@ -97,7 +96,7 @@ impl ContainerExecInput {
             command: ExecCommand::Shell(command_value.into()),
             user: None,
             workdir: None,
-            env: BTreeMap::new(),
+            env: IndexMap::new(),
             detach: false,
             privileged: false,
             tty: false,

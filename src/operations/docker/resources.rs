@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-
+use indexmap::IndexMap;
 use serde_json::Value;
 
 use crate::api::Command;
@@ -118,7 +117,7 @@ pub struct NetworkInput {
     pub ipam_driver: Option<String>,
     pub subnet: Option<String>,
     pub scope: Option<String>,
-    pub aux_addresses: BTreeMap<String, String>,
+    pub aux_addresses: IndexMap<String, String>,
     pub options: Vec<String>,
     pub ipam_options: Vec<String>,
     pub labels: Vec<String>,
@@ -137,7 +136,7 @@ impl NetworkInput {
             ipam_driver: None,
             subnet: None,
             scope: None,
-            aux_addresses: BTreeMap::new(),
+            aux_addresses: IndexMap::new(),
             options: Vec::new(),
             ipam_options: Vec::new(),
             labels: Vec::new(),
@@ -312,7 +311,8 @@ fn container_commands(input: &ContainerInput, value: &Value) -> Result<Vec<Comma
         optional(&mut bits, "--entrypoint", input.entrypoint.as_deref());
         optional(&mut bits, "--user", input.user.as_deref());
         if let Some(cpus) = input.cpus {
-            bits.extend([raw("--cpus"), quoted(cpus.to_string())]);
+            let cpus = if cpus.fract() == 0.0 { format!("{cpus:.1}") } else { cpus.to_string() };
+            bits.extend([raw("--cpus"), quoted(cpus)]);
         }
         optional(&mut bits, "--memory", input.memory.as_deref());
         bits.extend(input.extra_args.iter().map(quoted));

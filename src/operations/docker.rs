@@ -6,13 +6,12 @@ pub use commands::*;
 pub use plugin::*;
 pub use resources::*;
 
-use std::collections::BTreeMap;
-
 use crate::api::{Command, CommandBit, HiddenValue, StringCommand};
 use crate::connectors::Connector;
 use crate::facts::docker::{DockerAuths, DockerImage};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
+use indexmap::IndexMap;
 
 const DOCKER_HUB_SERVER: &str = "https://index.docker.io/v1/";
 
@@ -31,8 +30,8 @@ pub struct BuildInput {
     pub path: String,
     pub tags: Vec<String>,
     pub dockerfile: Option<String>,
-    pub build_args: BTreeMap<String, String>,
-    pub labels: BTreeMap<String, String>,
+    pub build_args: IndexMap<String, String>,
+    pub labels: IndexMap<String, String>,
     pub target: Option<String>,
     pub platform: Option<String>,
     pub network: Option<String>,
@@ -52,8 +51,8 @@ impl BuildInput {
             path: path.into(),
             tags: Vec::new(),
             dockerfile: None,
-            build_args: BTreeMap::new(),
-            labels: BTreeMap::new(),
+            build_args: IndexMap::new(),
+            labels: IndexMap::new(),
             target: None,
             platform: None,
             network: None,
@@ -85,43 +84,48 @@ impl StatefulOperation for Build {
         options: &'a FactOptions,
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
-            if input.path.is_empty() {
-                return Err("docker.build requires a context path".into());
-            }
+            let mut all_tags_exist = false;
             if !input.force && !input.tags.is_empty() {
                 let facts = FactExecutor::new(connector, options);
-                let mut all = true;
+                all_tags_exist = true;
                 for tag in &input.tags {
-                    all &= json_truthy(&facts.get(&DockerImage, tag).await?);
-                }
-                if all {
-                    return Ok(Vec::new());
+                    all_tags_exist &= json_truthy(&facts.get(&DockerImage, tag).await?);
                 }
             }
-            let mut bits = vec![raw(&input.build_command)];
-            optional(&mut bits, "--builder", input.builder.as_deref());
-            for value in &input.tags {
-                bits.extend([raw("-t"), quoted(value)]);
-            }
-            optional(&mut bits, "-f", input.dockerfile.as_deref());
-            pairs(&mut bits, "--build-arg", &input.build_args);
-            pairs(&mut bits, "--label", &input.labels);
-            optional(&mut bits, "--target", input.target.as_deref());
-            optional(&mut bits, "--platform", input.platform.as_deref());
-            optional(&mut bits, "--network", input.network.as_deref());
-            repeated(&mut bits, "--cache-from", &input.cache_from);
-            repeated(&mut bits, "--cache-to", &input.cache_to);
-            repeated(&mut bits, "--secret", &input.secrets);
-            if input.pull {
-                bits.push(raw("--pull"));
-            }
-            if input.no_cache {
-                bits.push(raw("--no-cache"));
-            }
-            bits.push(quoted(&input.path));
-            Ok(command(bits))
+            build_commands(input, all_tags_exist).map_err(Into::into)
         })
     }
+}
+
+fn build_commands(input: &BuildInput, all_tags_exist: bool) -> Result<Vec<Command>, &'static str> {
+    if input.path.is_empty() {
+        return Err("docker.build requires a context path");
+    }
+    if !input.force && !input.tags.is_empty() && all_tags_exist {
+        return Ok(Vec::new());
+    }
+    let mut bits = vec![raw(&input.build_command)];
+    optional(&mut bits, "--builder", input.builder.as_deref());
+    for value in &input.tags {
+        bits.extend([raw("-t"), quoted(value)]);
+    }
+    optional(&mut bits, "-f", input.dockerfile.as_deref());
+    pairs(&mut bits, "--build-arg", &input.build_args);
+    pairs(&mut bits, "--label", &input.labels);
+    optional(&mut bits, "--target", input.target.as_deref());
+    optional(&mut bits, "--platform", input.platform.as_deref());
+    optional(&mut bits, "--network", input.network.as_deref());
+    repeated(&mut bits, "--cache-from", &input.cache_from);
+    repeated(&mut bits, "--cache-to", &input.cache_to);
+    repeated(&mut bits, "--secret", &input.secrets);
+    if input.pull {
+        bits.push(raw("--pull"));
+    }
+    if input.no_cache {
+        bits.push(raw("--no-cache"));
+    }
+    bits.push(quoted(&input.path));
+    Ok(command(bits))
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -149,32 +153,30 @@ impl StatefulOperation for Login {
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
             let target = input.server.as_deref().unwrap_or(DOCKER_HUB_SERVER);
-            if !input.force
-                && FactExecutor::new(connector, options)
-                    .get(&DockerAuths, &())
-                    .await?
-                    .iter()
-                    .any(|value| value == target)
-            {
-                return Ok(Vec::new());
-            }
-            let mut bits = vec![
-                raw("printf"),
-                raw("%s"),
-                CommandBit::quoted(input.password.clone()),
-                raw("|"),
-                raw("docker"),
-                raw("login"),
-                raw("--username"),
-                quoted(&input.username),
-                raw("--password-stdin"),
-            ];
-            if let Some(server) = &input.server {
-                bits.push(quoted(server));
-            }
-            Ok(command(bits))
+            let auths = FactExecutor::new(connector, options).get(&DockerAuths, &()).await?;
+            Ok(login_commands(input, auths.iter().any(|value| value == target)))
         })
     }
+}
+
+fn login_commands(input: &LoginInput, authenticated: bool) -> Vec<Command> {
+    if !input.force && authenticated {
+        return Vec::new();
+    }
+    let mut bits = vec![
+        raw("printf '%s'"),
+        CommandBit::quoted(input.password.clone()),
+        raw("|"),
+        raw("docker"),
+        raw("login"),
+        raw("--username"),
+        quoted(&input.username),
+        raw("--password-stdin"),
+    ];
+    if let Some(server) = &input.server {
+        bits.push(quoted(server));
+    }
+    command(bits)
 }
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct LogoutInput {
@@ -198,17 +200,21 @@ impl StatefulOperation for Logout {
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
             let target = input.server.as_deref().unwrap_or(DOCKER_HUB_SERVER);
-            if !FactExecutor::new(connector, options).get(&DockerAuths, &()).await?.iter().any(|value| value == target)
-            {
-                return Ok(Vec::new());
-            }
-            let mut bits = vec![raw("docker"), raw("logout")];
-            if let Some(server) = &input.server {
-                bits.push(quoted(server));
-            }
-            Ok(command(bits))
+            let auths = FactExecutor::new(connector, options).get(&DockerAuths, &()).await?;
+            Ok(logout_commands(input, auths.iter().any(|value| value == target)))
         })
     }
+}
+
+fn logout_commands(input: &LogoutInput, authenticated: bool) -> Vec<Command> {
+    if !authenticated {
+        return Vec::new();
+    }
+    let mut bits = vec![raw("docker"), raw("logout")];
+    if let Some(server) = &input.server {
+        bits.push(quoted(server));
+    }
+    command(bits)
 }
 
 fn optional(bits: &mut Vec<CommandBit>, flag: &str, value: Option<&str>) {
@@ -221,11 +227,15 @@ fn repeated(bits: &mut Vec<CommandBit>, flag: &str, values: &[String]) {
         bits.extend([raw(flag), quoted(value)]);
     }
 }
-fn pairs(bits: &mut Vec<CommandBit>, flag: &str, values: &BTreeMap<String, String>) {
+fn pairs(bits: &mut Vec<CommandBit>, flag: &str, values: &IndexMap<String, String>) {
     for (key, value) in values {
         bits.extend([raw(flag), quoted(format!("{key}={value}"))]);
     }
 }
+
+#[cfg(test)]
+#[path = "docker/state_tests.rs"]
+mod tests;
 fn json_truthy(value: &serde_json::Value) -> bool {
     match value {
         serde_json::Value::Null => false,

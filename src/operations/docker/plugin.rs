@@ -1,5 +1,4 @@
-use std::collections::BTreeMap;
-
+use indexmap::IndexMap;
 use serde_json::Value;
 
 use crate::api::Command;
@@ -16,13 +15,13 @@ pub struct PluginInput {
     pub alias: Option<String>,
     pub present: bool,
     pub enabled: bool,
-    pub options: BTreeMap<String, String>,
+    pub options: IndexMap<String, String>,
 }
 
 impl PluginInput {
     #[must_use]
     pub fn new(plugin: impl Into<String>) -> Self {
-        Self { plugin: plugin.into(), alias: None, present: true, enabled: true, options: BTreeMap::new() }
+        Self { plugin: plugin.into(), alias: None, present: true, enabled: true, options: IndexMap::new() }
     }
 }
 

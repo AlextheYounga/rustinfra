@@ -23,6 +23,160 @@ fn container_create_and_resources_match_reference_order() {
 }
 
 #[test]
+fn container_commands_match_lifecycle_and_all_creation_option_fixtures() {
+    let missing = Value::Array(Vec::new());
+    let running = serde_json::json!([{"State": {"Status": "running"}}]);
+    let stopped = serde_json::json!([{"State": {"Status": "exited"}}]);
+
+    let mut input = ContainerInput::new("nginx", "nginx:alpine");
+    input.ports.push("80:80".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx -p 80:80 nginx:alpine", "docker container start nginx"]
+    );
+    input.start = false;
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx -p 80:80 nginx:alpine"]
+    );
+    input.present = false;
+    assert_eq!(descriptions(&container_commands(&input, &running).unwrap()), ["docker container rm -f nginx"]);
+
+    input.present = true;
+    input.start = true;
+    input.force = true;
+    assert_eq!(
+        descriptions(&container_commands(&input, &running).unwrap()),
+        [
+            "docker container rm -f nginx",
+            "docker container create --name nginx -p 80:80 nginx:alpine",
+            "docker container start nginx"
+        ]
+    );
+    input.force = false;
+    assert_eq!(descriptions(&container_commands(&input, &stopped).unwrap()), ["docker container start nginx"]);
+    input.start = false;
+    assert_eq!(descriptions(&container_commands(&input, &running).unwrap()), ["docker container stop nginx"]);
+
+    let mut injected = ContainerInput::new("nginx; rm -rf /", "nginx:alpine");
+    injected.ports.push("80:80".to_owned());
+    injected.start = false;
+    assert_eq!(
+        descriptions(&container_commands(&injected, &missing).unwrap()),
+        ["docker container create --name 'nginx; rm -rf /' -p 80:80 nginx:alpine"]
+    );
+
+    let mut options = ContainerInput::new("myapp", "myapp:latest");
+    options.start = false;
+    options.ports.push("8080:80".to_owned());
+    options.mounts.push("type=bind,source=/host/data,target=/app/data".to_owned());
+    options.privileged = true;
+    options.hostname = Some("myapp-host".to_owned());
+    options.entrypoint = Some("/bin/sh".to_owned());
+    options.user = Some("1000:1000".to_owned());
+    options.cpus = Some(1.5);
+    options.memory = Some("1g".to_owned());
+    options.extra_args = vec!["--cap-add".to_owned(), "SYS_PTRACE".to_owned()];
+    assert_eq!(
+        descriptions(&container_commands(&options, &missing).unwrap()),
+        [
+            "docker container create --name myapp -p 8080:80 --mount type=bind,source=/host/data,target=/app/data --privileged --hostname myapp-host --entrypoint /bin/sh --user 1000:1000 --cpus 1.5 --memory 1g --cap-add SYS_PTRACE myapp:latest"
+        ]
+    );
+
+    options = ContainerInput::new("myapp", "myapp:latest");
+    options.start = false;
+    options.cpus = Some(2.0);
+    options.memory = Some("512m".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&options, &missing).unwrap()),
+        ["docker container create --name myapp --cpus 2.0 --memory 512m myapp:latest"]
+    );
+}
+
+#[test]
+fn container_commands_match_command_dns_env_label_mount_and_identity_fixtures() {
+    let missing = Value::Array(Vec::new());
+    let mut input = ContainerInput::new("nginx", "nginx:alpine");
+    input.start = false;
+    input.container_command = Some("sh -c 'echo leroy jenkins'".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx nginx:alpine sh -c 'echo leroy jenkins'"]
+    );
+    input.container_command = None;
+    input.environment_files.push("a_file.env".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx --env-file a_file.env nginx:alpine"]
+    );
+    input.environment_files.push("b_file.env".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx --env-file a_file.env --env-file b_file.env nginx:alpine"]
+    );
+    input.environment_files.clear();
+    input.labels.push("eg_key=eg_val".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx --label eg_key=eg_val nginx:alpine"]
+    );
+    input.labels.clear();
+    input.dns.push("1.1.1.1".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx --dns 1.1.1.1 nginx:alpine"]
+    );
+    input.dns.push("2.2.2.2".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&input, &missing).unwrap()),
+        ["docker container create --name nginx --dns 1.1.1.1 --dns 2.2.2.2 nginx:alpine"]
+    );
+
+    let mut identity = ContainerInput::new("myapp", "myapp:latest");
+    identity.start = false;
+    identity.hostname = Some("myapp-host".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        ["docker container create --name myapp --hostname myapp-host myapp:latest"]
+    );
+    identity.hostname = None;
+    identity.entrypoint = Some("/bin/sh".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        ["docker container create --name myapp --entrypoint /bin/sh myapp:latest"]
+    );
+    identity.entrypoint = None;
+    identity.user = Some("1000:1000".to_owned());
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        ["docker container create --name myapp --user 1000:1000 myapp:latest"]
+    );
+    identity.user = None;
+    identity.privileged = true;
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        ["docker container create --name myapp --privileged myapp:latest"]
+    );
+    identity.privileged = false;
+    identity.mounts =
+        vec!["type=bind,source=/host/data,target=/app/data".to_owned(), "type=tmpfs,target=/tmp".to_owned()];
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        [
+            "docker container create --name myapp --mount type=bind,source=/host/data,target=/app/data --mount type=tmpfs,target=/tmp myapp:latest"
+        ]
+    );
+    identity.mounts.clear();
+    identity.extra_args =
+        vec!["--cap-add".to_owned(), "NET_ADMIN".to_owned(), "--device".to_owned(), "/dev/net/tun".to_owned()];
+    assert_eq!(
+        descriptions(&container_commands(&identity, &missing).unwrap()),
+        ["docker container create --name myapp --cap-add NET_ADMIN --device /dev/net/tun myapp:latest"]
+    );
+}
+
+#[test]
 fn image_commands_match_tag_digest_force_registry_and_removal_fixtures() {
     let existing = serde_json::json!([{"Id": "sha256:existing"}]);
     let missing = Value::Array(Vec::new());
