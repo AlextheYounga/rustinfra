@@ -147,4 +147,31 @@ mod tests {
             "crontab -l -u 'app user' || true"
         );
     }
+
+    #[test]
+    fn matches_reference_comments_environment_user_and_injection_fixtures() {
+        let output = [
+            "* * * * * apt update".to_owned(),
+            "# this is a comment".to_owned(),
+            "# another line in the comment, wut!".to_owned(),
+            "0 0 * * * apt install -fy".to_owned(),
+            "MAILTO = me@example.com".to_owned(),
+            "cron_tz = Europe/Amsterdam".to_owned(),
+            "SHELL=/bin/bash".to_owned(),
+            "@daily echo daily".to_owned(),
+        ];
+        let file = Crontab.process(&output, &CrontabInput::default()).unwrap();
+        assert_eq!(file.items.len(), 6);
+        assert_eq!(file.items[0].command.as_deref(), Some("apt update"));
+        assert_eq!(file.items[1].comments, ["# this is a comment", "# another line in the comment, wut!"]);
+        assert_eq!(file.items[2].environment.as_deref(), Some("MAILTO = me@example.com"));
+        assert_eq!(file.items[3].environment.as_deref(), Some("cron_tz = Europe/Amsterdam"));
+        assert_eq!(file.items[4].environment.as_deref(), Some("SHELL=/bin/bash"));
+        assert_eq!(file.items[5].special_time.as_deref(), Some("@daily"));
+        assert_eq!(file.items[5].command.as_deref(), Some("echo daily"));
+        assert_eq!(
+            Crontab.command(&CrontabInput { user: Some("x; reboot".to_owned()) }).raw_value(),
+            "crontab -l -u 'x; reboot' || true"
+        );
+    }
 }

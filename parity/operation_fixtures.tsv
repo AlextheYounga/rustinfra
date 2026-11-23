@@ -817,8 +817,8 @@ postgresql.role/user_remove.json	unqualified
 postgresql.sql/execute.json	unqualified	
 puppet.agent/run_agent.json	unqualified	
 puppet.agent/run_agent_quotes_injection.json	unqualified	
-python.call/call_func.json	unqualified	
-python.raise_exception/call_func.json	unqualified	
+python.call/call_func.json	qualified	src/operations/python.rs::callbacks_execute_locally_and_errors_propagate
+python.raise_exception/call_func.json	qualified	src/operations/python.rs::callbacks_execute_locally_and_errors_propagate
 runit.manage/manage.json	unqualified	
 runit.manage/unmanage.json	unqualified	
 runit.service/disable.json	unqualified	

@@ -25,7 +25,7 @@ that is observable through pyinfra's built-in product is in scope.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
-- **Explicit fixture qualification:** 132/1700 reference fixtures (7.76%).
+- **Explicit fixture qualification:** 140/1700 reference fixtures (8.24%).
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
@@ -162,7 +162,8 @@ remaining fixture qualification and broader release gates stay explicit below.
 - [x] `bsdinit`
 - [x] `cargo`
 - [x] `choco`
-- [ ] **Partial** `crontab`
+- [x] `crontab` — comments, environment assignments, normal and special schedules, user selection,
+  and injection-shaped usernames match all reference fact fixtures.
 - [x] `deb`
 - [x] `dnf`
 - [x] `docker` — all inspect, derived container/image/storage, command-specific, version, and

@@ -41,12 +41,12 @@ bsdinit.ServiceEnabled/services.yaml	unqualified
 cargo.CargoPackages/packages.json	unqualified	
 choco.ChocoPackages/packages.json	unqualified	
 choco.ChocoVersion/version.json	unqualified	
-crontab.Crontab/comments.json	unqualified	
-crontab.Crontab/env_variables.json	unqualified	
-crontab.Crontab/env_variables_spaced_and_lowercase.json	unqualified	
-crontab.Crontab/simple.json	unqualified	
-crontab.Crontab/simple_user.json	unqualified	
-crontab.Crontab/user_quotes_injection.yaml	unqualified	
+crontab.Crontab/comments.json	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
+crontab.Crontab/env_variables.json	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
+crontab.Crontab/env_variables_spaced_and_lowercase.json	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
+crontab.Crontab/simple.json	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
+crontab.Crontab/simple_user.json	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
+crontab.Crontab/user_quotes_injection.yaml	qualified	src/facts/crontab.rs::matches_reference_comments_environment_user_and_injection_fixtures
 deb.DebPackage/directory_same_name.json	unqualified	
 deb.DebPackage/non_deb_file.json	unqualified	
 deb.DebPackage/package.json	unqualified	
