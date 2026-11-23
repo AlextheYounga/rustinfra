@@ -1,11 +1,11 @@
 symbol	status
 apk.ApkPackages	present
-apt.AptHeldPackages	missing
-apt.AptKeys	missing
-apt.AptPackageProvides	missing
-apt.AptPackages	missing
+apt.AptHeldPackages	present
+apt.AptKeys	present
+apt.AptPackageProvides	present
+apt.AptPackages	present
 apt.AptSources	present
-apt.SimulateOperationWillChange	missing
+apt.SimulateOperationWillChange	present
 brew.BrewCasks	present
 brew.BrewPackages	present
 brew.BrewTaps	present

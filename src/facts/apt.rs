@@ -1,10 +1,12 @@
 use std::error::Error;
+use std::io;
 
 use indexmap::IndexMap;
 
-use crate::api::StringCommand;
+use crate::api::{CommandBit, StringCommand};
 
 use super::Fact;
+use super::gpg::{GpgKeyInfo, GpgKeyrings};
 
 const FILE_MARKER: &str = "##PYINFRA_FILE ";
 
@@ -178,6 +180,167 @@ fn split_field(value: Option<&String>) -> Vec<String> {
     value.into_iter().flat_map(|value| value.split_whitespace()).map(str::to_owned).collect()
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AptPackages;
+impl Fact for AptPackages {
+    type Input = ();
+    type Output = IndexMap<String, Vec<String>>;
+    fn name(&self) -> &'static str {
+        "apt.AptPackages"
+    }
+    fn command(&self, _: &()) -> StringCommand {
+        StringCommand::new(["apt list --installed 2>/dev/null"])
+    }
+    fn default(&self) -> Self::Output {
+        IndexMap::new()
+    }
+    fn requires_command(&self, _: &()) -> Option<&str> {
+        Some("apt")
+    }
+    fn process(&self, output: &[String], _: &()) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        let mut packages = IndexMap::<String, Vec<String>>::new();
+        for line in output {
+            let fields = line.split_whitespace().collect::<Vec<_>>();
+            if fields.len() < 4 || !fields[3].starts_with("[installed") {
+                continue;
+            }
+            let Some((name, _source)) = fields[0].split_once('/') else { continue };
+            packages.entry(name.to_owned()).or_default().push(fields[1].to_owned());
+        }
+        Ok(packages)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AptPackageProvides;
+impl Fact for AptPackageProvides {
+    type Input = String;
+    type Output = Vec<(String, String)>;
+    fn name(&self) -> &'static str {
+        "apt.AptPackageProvides"
+    }
+    fn command(&self, package: &String) -> StringCommand {
+        StringCommand::new([CommandBit::from("apt-cache showpkg"), CommandBit::quoted(package.clone())])
+    }
+    fn default(&self) -> Self::Output {
+        Vec::new()
+    }
+    fn requires_command(&self, _: &String) -> Option<&str> {
+        Some("apt-cache")
+    }
+    fn process(&self, output: &[String], _: &String) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        let mut reverse = false;
+        let mut packages = Vec::new();
+        for line in output {
+            let line = line.trim();
+            if line == "Reverse Provides:" {
+                reverse = true;
+                continue;
+            }
+            if reverse && !line.is_empty() {
+                let mut fields = line.split_whitespace();
+                if let (Some(name), Some(version)) = (fields.next(), fields.next()) {
+                    packages.push((name.to_owned(), version.to_owned()));
+                }
+            }
+        }
+        Ok(packages)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AptHeldPackages;
+impl Fact for AptHeldPackages {
+    type Input = ();
+    type Output = Vec<String>;
+    fn name(&self) -> &'static str {
+        "apt.AptHeldPackages"
+    }
+    fn command(&self, _: &()) -> StringCommand {
+        StringCommand::new(["apt-mark showhold"])
+    }
+    fn default(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn requires_command(&self, _: &()) -> Option<&str> {
+        Some("apt-mark")
+    }
+    fn process(&self, output: &[String], _: &()) -> Result<Vec<String>, Box<dyn Error + Send + Sync>> {
+        Ok(output.iter().map(|line| line.trim()).filter(|line| !line.is_empty()).map(str::to_owned).collect())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct AptKeys;
+impl Fact for AptKeys {
+    type Input = Option<Vec<String>>;
+    type Output = IndexMap<String, GpgKeyInfo>;
+    fn name(&self) -> &'static str {
+        "apt.AptKeys"
+    }
+    fn command(&self, directories: &Self::Input) -> StringCommand {
+        GpgKeyrings.command(directories.as_ref().unwrap_or(&vec![
+            "/etc/apt/trusted.gpg.d".to_owned(),
+            "/etc/apt/keyrings".to_owned(),
+            "/usr/share/keyrings".to_owned(),
+        ]))
+    }
+    fn default(&self) -> Self::Output {
+        IndexMap::new()
+    }
+    fn requires_command(&self, _: &Self::Input) -> Option<&str> {
+        Some("gpg")
+    }
+    fn process(&self, output: &[String], input: &Self::Input) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        let keyrings = GpgKeyrings.process(output, input.as_ref().unwrap_or(&Vec::new()))?;
+        Ok(keyrings.into_values().flat_map(|keyring| keyring.keys).collect())
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct AptSimulation {
+    pub upgraded: u32,
+    pub newly_installed: u32,
+    pub removed: u32,
+    pub not_upgraded: u32,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SimulateOperationWillChange;
+impl Fact for SimulateOperationWillChange {
+    type Input = String;
+    type Output = AptSimulation;
+    fn name(&self) -> &'static str {
+        "apt.SimulateOperationWillChange"
+    }
+    fn command(&self, action: &String) -> StringCommand {
+        let action = StringCommand::new([CommandBit::quoted(action.clone())]).raw_value();
+        StringCommand::new([format!(
+            "LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" {action} --dry-run"
+        )])
+    }
+    fn default(&self) -> AptSimulation {
+        AptSimulation::default()
+    }
+    fn requires_command(&self, _: &String) -> Option<&str> {
+        Some("apt-get")
+    }
+    fn process(&self, output: &[String], _: &String) -> Result<AptSimulation, Box<dyn Error + Send + Sync>> {
+        for line in output {
+            let values = line.split_whitespace().collect::<Vec<_>>();
+            if values.len() >= 10 && values[1] == "upgraded," && values[4] == "installed," && values[7] == "remove" {
+                return Ok(AptSimulation {
+                    upgraded: values[0].parse()?,
+                    newly_installed: values[2].parse()?,
+                    removed: values[5].parse()?,
+                    not_upgraded: values[9].parse()?,
+                });
+            }
+        }
+        Err(io::Error::new(io::ErrorKind::InvalidData, "did not find proposed apt changes in output").into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{AptSources, Fact, parse_apt_repo};
@@ -221,3 +384,7 @@ mod tests {
         assert!(key[0].contains("-----BEGIN PGP PUBLIC KEY BLOCK-----\n\nabc123"));
     }
 }
+
+#[cfg(test)]
+#[path = "apt/package_tests.rs"]
+mod package_tests;
