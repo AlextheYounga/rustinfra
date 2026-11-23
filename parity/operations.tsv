@@ -177,10 +177,10 @@ yum.packages	present
 yum.repo	present
 yum.rpm	present
 yum.update	present
-zfs.dataset	missing
-zfs.filesystem	missing
-zfs.snapshot	missing
-zfs.volume	missing
+zfs.dataset	present
+zfs.filesystem	present
+zfs.snapshot	present
+zfs.volume	present
 zypper.packages	present
 zypper.repo	present
 zypper.rpm	present

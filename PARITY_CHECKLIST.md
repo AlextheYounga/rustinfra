@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 95%.
-- **Measured built-in catalog surface:** 362/380 symbols (95.26%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 168/186 source operations across 55 reference modules.
+- **Defensible pyinfra experience parity:** 96%.
+- **Measured built-in catalog surface:** 366/380 symbols (96.32%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 172/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -143,7 +143,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   self-updates, both facts, and all reference fixtures.
 - [x] `yum` — package and provider convergence, keys, repositories, RPM files, updates, and
   fixture-backed command behavior.
-- [ ] **Missing** `zfs`
+- [x] `zfs` — datasets, filesystems, volumes, and snapshots with property convergence,
+  recursive creation/destruction, sparse volumes, and shell-safe names and values.
 - [x] `zypper` — package convergence, global arguments, repositories, RPM files, updates, and
   fixture-backed command behavior.
 

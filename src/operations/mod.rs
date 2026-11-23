@@ -58,6 +58,7 @@ pub mod uv;
 pub mod vzctl;
 pub mod xbps;
 pub mod yum;
+pub mod zfs;
 pub mod zypper;
 
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
