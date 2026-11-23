@@ -29,6 +29,7 @@ pub mod pipx;
 pub mod pkg;
 pub mod pkgin;
 pub mod pnpm;
+pub mod podman;
 pub mod rpm;
 pub mod runit;
 pub mod selinux;

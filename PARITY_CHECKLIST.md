@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 52%.
-- **Measured built-in catalog surface:** 199/380 symbols (52.37%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 54%.
+- **Measured built-in catalog surface:** 206/380 symbols (54.21%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 92/186 source operations across 47 reference modules.
-- **Rust fact surface:** 107/194 fixture-backed facts across 50 reference modules.
+- **Rust fact surface:** 114/194 fixture-backed facts across 50 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -174,7 +174,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `pkg`
 - [x] `pkgin`
 - [x] `pnpm`
-- [ ] **Missing** `podman`
+- [x] `podman`
 - [ ] **Missing** `postgres`
 - [ ] **Missing** `postgresql`
 - [ ] **Partial** `rpm`
