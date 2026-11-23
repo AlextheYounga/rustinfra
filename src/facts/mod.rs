@@ -8,6 +8,7 @@ pub mod cargo;
 pub mod choco;
 pub mod crontab;
 pub mod deb;
+pub mod docker;
 pub mod efibootmgr;
 mod executor;
 pub mod files;
