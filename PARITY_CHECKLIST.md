@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 81%.
-- **Measured built-in catalog surface:** 307/380 symbols (80.79%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 113/186 source operations across 49 reference modules.
+- **Defensible pyinfra experience parity:** 85%.
+- **Measured built-in catalog surface:** 323/380 symbols (85.00%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 129/186 source operations across 52 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -88,7 +88,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `launchd` — start, stop, restart-by-stop/start, status parsing, shell-safe service names, and
   all reference fixtures.
 - [ ] **Missing** `lxd`
-- [ ] **Missing** `mysql`
+- [x] `mysql` — databases, users, privileges, SQL, dumps, loads, TLS/X509 requirements, resource
+  limits, typed current-state facts, secret masking, shell-safe values, and reference fixtures.
 - [x] `npm` — global and directory package install, removal, upgrades, pinned versions, fact
   parsing, shell-safe directories, and all reference fixtures.
 - [x] `openrc` — service control, per-runlevel enablement, both facts, shell-safe service and
@@ -107,8 +108,10 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   and all reference fixtures.
 - [x] `pnpm` — global and project packages, scoped/pinned packages, development dependencies,
   lockfile-based installation, script execution, all three facts, and all reference fixtures.
-- [ ] **Missing** `postgres`
-- [ ] **Missing** `postgresql`
+- [x] `postgres` — databases, roles, SQL, dumps, loads, typed current-state facts, connection
+  options, secret masking, shell-safe values, and reference fixtures.
+- [x] `postgresql` — deprecated compatibility operation names delegate to the complete `postgres`
+  behavior while retaining their reference non-idempotent metadata.
 - [ ] **Missing** `puppet`
 - [ ] **Missing** `python`
 - [x] `runit` — management links, automatic-start state, runsv readiness, service control,
