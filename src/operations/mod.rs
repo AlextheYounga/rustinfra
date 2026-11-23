@@ -55,6 +55,7 @@ pub mod systemd;
 pub mod sysvinit;
 pub mod upstart;
 pub mod uv;
+pub mod vzctl;
 pub mod xbps;
 pub mod yum;
 pub mod zypper;
