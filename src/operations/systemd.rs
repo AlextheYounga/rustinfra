@@ -3,7 +3,39 @@ use crate::connectors::Connector;
 use crate::facts::systemd::{SystemdEnabled, SystemdInput, SystemdStatus, systemctl_command};
 use crate::facts::{FactExecutor, FactOptions};
 
-use super::{StatefulOperation, StatefulOperationFuture};
+use super::{Operation, StatefulOperation, StatefulOperationFuture};
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct DaemonReloadInput {
+    pub user_mode: bool,
+    pub machine: Option<String>,
+    pub user_name: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DaemonReload;
+
+impl Operation for DaemonReload {
+    type Input = DaemonReloadInput;
+
+    fn name(&self) -> &'static str {
+        "systemd.daemon_reload"
+    }
+
+    fn is_idempotent(&self) -> bool {
+        false
+    }
+
+    fn commands(&self, input: &Self::Input) -> Vec<Command> {
+        let systemd = SystemdInput {
+            user_mode: input.user_mode,
+            machine: input.machine.clone(),
+            user_name: input.user_name.clone(),
+            services: Vec::new(),
+        };
+        vec![systemctl(&systemd, "daemon-reload", None)]
+    }
+}
 
 const UNIT_SUFFIXES: &[&str] = &[
     ".service",
@@ -147,9 +179,10 @@ fn systemctl(input: &SystemdInput, action: &str, unit: Option<&str>) -> Command 
 
 #[cfg(test)]
 mod tests {
-    use super::{ServiceInput, ServiceState, normalized_unit_name, service_commands};
+    use super::{DaemonReload, DaemonReloadInput, ServiceInput, ServiceState, normalized_unit_name, service_commands};
     use crate::api::Command;
     use crate::facts::systemd::SystemdInput;
+    use crate::operations::Operation;
 
     fn descriptions(commands: &[Command]) -> Vec<String> {
         commands
@@ -235,5 +268,19 @@ mod tests {
                 "systemctl --machine=app@container start worker.service"
             ]
         );
+    }
+
+    #[test]
+    fn standalone_daemon_reload_supports_user_and_machine_scopes() {
+        let input = DaemonReloadInput {
+            user_mode: true,
+            machine: Some("container".to_owned()),
+            user_name: Some("app".to_owned()),
+        };
+        assert_eq!(
+            descriptions(&DaemonReload.commands(&input)),
+            ["systemctl --user --machine=app@container daemon-reload"]
+        );
+        assert!(!DaemonReload.is_idempotent());
     }
 }

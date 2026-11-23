@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 85%.
-- **Measured built-in catalog surface:** 323/380 symbols (85.00%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 129/186 source operations across 52 reference modules.
+- **Defensible pyinfra experience parity:** 87%.
+- **Measured built-in catalog surface:** 331/380 symbols (87.11%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 137/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -83,7 +83,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] **Partial** `git` — repository convergence exists; bare repositories and configuration remain.
 - [x] `go` — package install, removal, upgrades, pinned versions, binary naming, fact parsing, and
   all reference fixtures.
-- [ ] **Missing** `gpg`
+- [x] `gpg` — local, URL, and keyserver installs, dearmoring, fingerprint-aware convergence,
+  binary and armored keyring removal, permissions, validation, and shell-safe values.
 - [ ] **Partial** `iptables` — chains and rules exist; complete fixture qualification is outstanding.
 - [x] `launchd` — start, stop, restart-by-stop/start, status parsing, shell-safe service names, and
   all reference fixtures.
@@ -112,7 +113,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   options, secret masking, shell-safe values, and reference fixtures.
 - [x] `postgresql` — deprecated compatibility operation names delegate to the complete `postgres`
   behavior while retaining their reference non-idempotent metadata.
-- [ ] **Missing** `puppet`
+- [x] `puppet` — agent execution, server and port selection, and shell-safe values.
 - [ ] **Missing** `python`
 - [x] `runit` — management links, automatic-start state, runsv readiness, service control,
   alternative service/source directories, both facts, and all reference fixtures.
@@ -122,11 +123,12 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   locales, and security limits exist; the rest of the server catalog remains.
 - [x] `snap` — package installation/removal, classic confinement, channel refreshes, both facts, and
   all reference fixtures.
-- [ ] **Missing** `ssh`
+- [x] `ssh` — nested commands, key scanning, SCP uploads/downloads, remote-sudo handoff,
+  exact known-host matching, typed file state, and shell-safe host, user, port, and path values.
 - [x] `supervisorctl` — single/group/all process convergence, configuration and masked
   authentication options, all non-interactive actions, status/PID facts, and all reference fixtures.
-- [ ] **Partial** `systemd` — service convergence exists; remaining operations and full fixtures
-  remain.
+- [x] `systemd` — service convergence, daemon reloads, user and machine scopes, unit suffixes,
+  typed status/enabled facts, and shell-safe values.
 - [x] `sysvinit` — service control, distribution-specific boot enablement, explicit runlevel links,
   status parsing, shell-safe values, and all reference fixtures.
 - [x] `upstart` — service control, idempotent override-file enablement, status parsing, shell-safe
@@ -186,7 +188,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `server`
 - [x] `snap`
 - [x] `supervisorctl`
-- [ ] **Partial** `systemd`
+- [x] `systemd`
 - [x] `sysvinit`
 - [x] `upstart`
 - [x] `uv`

@@ -65,8 +65,8 @@ git.config	missing
 git.repo	present
 git.worktree	missing
 go.packages	present
-gpg.dearmor	missing
-gpg.key	missing
+gpg.dearmor	present
+gpg.key	present
 iptables.chain	present
 iptables.rule	present
 launchd.service	present
@@ -107,7 +107,7 @@ postgresql.dump	present
 postgresql.load	present
 postgresql.role	present
 postgresql.sql	present
-puppet.agent	missing
+puppet.agent	present
 python.call	missing
 python.raise_exception	missing
 runit.auto	present
@@ -138,10 +138,10 @@ server.user	present
 server.user_authorized_keys	missing
 server.wait	present
 snap.package	present
-ssh.command	missing
-ssh.download	missing
-ssh.keyscan	missing
-ssh.upload	missing
+ssh.command	present
+ssh.download	present
+ssh.keyscan	present
+ssh.upload	present
 supervisorctl.add	present
 supervisorctl.clear	present
 supervisorctl.process	present
@@ -150,7 +150,7 @@ supervisorctl.remove	present
 supervisorctl.reread	present
 supervisorctl.signal	present
 supervisorctl.update	present
-systemd.daemon_reload	missing
+systemd.daemon_reload	present
 systemd.service	present
 sysvinit.enable	present
 sysvinit.service	present
