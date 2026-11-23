@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 88%.
-- **Measured built-in catalog surface:** 334/380 symbols (87.89%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 140/186 source operations across 55 reference modules.
+- **Defensible pyinfra experience parity:** 90%.
+- **Measured built-in catalog surface:** 343/380 symbols (90.26%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 149/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -74,8 +74,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `dnf` — packages, keys, repositories, RPM files, updates, module streams, quoting, and
   fixture-backed convergence.
 - [ ] **Missing** `docker`
-- [ ] **Partial** `files` — core state, transfers, templates, line editing, archives, and link
-  discovery exist; remaining file operations are outstanding.
+- [x] `files` — file and directory state, transfers, local-tree sync, rsync, block and line editing,
+  templates, archives, links, flags, remote copy/move/rename, URL downloads, and shell-safe values.
 - [x] `flatpak` — system/user package installation and removal, optional remotes, package metadata,
   package listings, shell-safe values, and all reference fixtures.
 - [x] `gem` — package install, removal, upgrades, pinned versions, fact parsing, and all reference

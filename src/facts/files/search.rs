@@ -126,14 +126,18 @@ pub struct BlockInput {
     pub end: String,
 }
 
+pub const BLOCK_MARKER: &str = "# {mark} PYINFRA BLOCK";
+pub const BLOCK_BEGIN: &str = "BEGIN";
+pub const BLOCK_END: &str = "END";
+
 impl BlockInput {
     #[must_use]
     pub fn new(path: impl Into<String>) -> Self {
         Self {
             path: path.into(),
-            marker: "# {mark} PYINFRA BLOCK".to_owned(),
-            begin: "BEGIN".to_owned(),
-            end: "END".to_owned(),
+            marker: BLOCK_MARKER.to_owned(),
+            begin: BLOCK_BEGIN.to_owned(),
+            end: BLOCK_END.to_owned(),
         }
     }
 }

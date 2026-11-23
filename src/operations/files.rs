@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::marker::Sync as MarkerSync;
 
 use thiserror::Error;
 
@@ -9,17 +10,29 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+pub(crate) const REMOTE_PATH_SEPARATOR: &str = "/";
+
+mod block;
+mod download;
 mod get;
 mod line;
 mod link;
+mod misc;
 mod put;
+mod rsync;
+mod sync;
 mod template;
 mod unarchive;
+pub use block::{Block, BlockInput};
+pub use download::{Download, DownloadInput};
 pub use get::{Get, GetInput};
 pub(crate) use line::escape_sed;
 pub use line::{Line, LineBackup, LineInput};
 pub use link::{Link, LinkInput};
+pub use misc::{Copy, CopyInput, Flags, FlagsInput, Move, MoveInput, Rename, RenameInput, Replace, ReplaceInput};
 pub use put::{Put, PutInput};
+pub use rsync::{Rsync, RsyncInput};
+pub use sync::{Sync, SyncInput};
 pub use template::{Template, TemplateInput};
 pub use unarchive::{Unarchive, UnarchiveInput};
 
@@ -262,7 +275,7 @@ fn chown(path: &str, user: Option<&str>, group: Option<&str>, recursive: bool) -
 
 fn remote_parent(path: &str) -> Option<&str> {
     let (parent, _) = path.rsplit_once('/')?;
-    if parent.is_empty() { Some("/") } else { Some(parent) }
+    if parent.is_empty() { Some(REMOTE_PATH_SEPARATOR) } else { Some(parent) }
 }
 
 fn raw(value: impl Into<String>) -> CommandBit {
@@ -277,7 +290,7 @@ fn shell(bits: impl IntoIterator<Item = CommandBit>) -> Command {
     Command::Shell(StringCommand::new(bits))
 }
 
-fn boxed(error: FilesOperationError) -> Box<dyn Error + Send + Sync> {
+fn boxed(error: FilesOperationError) -> Box<dyn Error + Send + MarkerSync> {
     Box::new(error)
 }
 
@@ -285,6 +298,14 @@ fn boxed(error: FilesOperationError) -> Box<dyn Error + Send + Sync> {
 pub enum FilesOperationError {
     #[error("path {path} exists and is not a {expected}")]
     WrongType { path: String, expected: &'static str },
+    #[error("src {0} does not exist")]
+    MissingSource(String),
+    #[error("dest {0} is not a directory")]
+    DestinationNotDirectory(String),
+    #[error("dest {0} already exists and `overwrite` is unset")]
+    DestinationExists(String),
+    #[error("{0} already exists and is different than src")]
+    DestinationDifferent(String),
 }
 
 #[cfg(test)]
