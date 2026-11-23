@@ -34,6 +34,7 @@ pub mod pkgin;
 pub mod pnpm;
 mod prepared_runner;
 mod retry;
+mod rpm_manager;
 pub mod runit;
 mod runtime;
 mod scheduler;
@@ -47,6 +48,8 @@ pub mod sysvinit;
 pub mod upstart;
 pub mod uv;
 pub mod xbps;
+pub mod yum;
+pub mod zypper;
 
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
 pub use deploy::{DeployError, DeployHost, OperationOptions, PreparedDeploy, PreparedOperation};

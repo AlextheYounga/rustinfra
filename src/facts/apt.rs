@@ -309,7 +309,7 @@ pub struct AptSimulation {
 pub struct SimulateOperationWillChange;
 impl Fact for SimulateOperationWillChange {
     type Input = String;
-    type Output = AptSimulation;
+    type Output = Option<AptSimulation>;
     fn name(&self) -> &'static str {
         "apt.SimulateOperationWillChange"
     }
@@ -319,22 +319,22 @@ impl Fact for SimulateOperationWillChange {
             "LC_ALL=C DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::=\"--force-confdef\" -o Dpkg::Options::=\"--force-confold\" {action} --dry-run"
         )])
     }
-    fn default(&self) -> AptSimulation {
-        AptSimulation::default()
+    fn default(&self) -> Self::Output {
+        None
     }
     fn requires_command(&self, _: &String) -> Option<&str> {
         Some("apt-get")
     }
-    fn process(&self, output: &[String], _: &String) -> Result<AptSimulation, Box<dyn Error + Send + Sync>> {
+    fn process(&self, output: &[String], _: &String) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
         for line in output {
             let values = line.split_whitespace().collect::<Vec<_>>();
             if values.len() >= 10 && values[1] == "upgraded," && values[4] == "installed," && values[7] == "remove" {
-                return Ok(AptSimulation {
+                return Ok(Some(AptSimulation {
                     upgraded: values[0].parse()?,
                     newly_installed: values[2].parse()?,
                     removed: values[5].parse()?,
                     not_upgraded: values[9].parse()?,
-                });
+                }));
             }
         }
         Err(io::Error::new(io::ErrorKind::InvalidData, "did not find proposed apt changes in output").into())

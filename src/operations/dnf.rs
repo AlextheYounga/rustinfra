@@ -5,6 +5,9 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+mod extra;
+pub use extra::{Key, Module, ModuleInput, Repo, RepoInput, Rpm, RpmInput, Update};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackagesInput {
     pub packages: Vec<String>,

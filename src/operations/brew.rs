@@ -4,7 +4,7 @@ use std::iter::once;
 
 use thiserror::Error;
 
-use crate::api::{Command, CommandBit, StringCommand};
+use crate::api::{Command, CommandBit, StringCommand, URL_SCHEME_SEPARATOR};
 use crate::connectors::Connector;
 use crate::facts::brew::{
     BrewCasks, BrewItemKind, BrewPackages, BrewTaps, BrewTrustMap, BrewTrusted, BrewVersion, new_cask_cli,
@@ -269,7 +269,8 @@ impl StatefulOperation for Tap {
 fn tap_source(input: &TapInput) -> Option<String> {
     input.source.clone().or_else(|| {
         let url = input.url.as_deref()?;
-        let path = url.split_once("://").map_or(url, |(_, rest)| rest).split_once('/').map(|(_, path)| path)?;
+        let path =
+            url.split_once(URL_SCHEME_SEPARATOR).map_or(url, |(_, rest)| rest).split_once('/').map(|(_, path)| path)?;
         Some(path.trim_matches('/').to_owned())
     })
 }

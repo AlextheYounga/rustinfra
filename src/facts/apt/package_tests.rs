@@ -35,7 +35,7 @@ fn simulation_parses_summary_and_quotes_action() {
         SimulateOperationWillChange
             .process(&["15 upgraded, 2 newly installed, 3 to remove and 4 not upgraded.".to_owned()], &action)
             .unwrap(),
-        AptSimulation { upgraded: 15, newly_installed: 2, removed: 3, not_upgraded: 4 }
+        Some(AptSimulation { upgraded: 15, newly_installed: 2, removed: 3, not_upgraded: 4 })
     );
     assert!(SimulateOperationWillChange.process(&["unexpected".to_owned()], &action).is_err());
     assert!(

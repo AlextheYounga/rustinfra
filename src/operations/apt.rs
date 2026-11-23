@@ -9,7 +9,11 @@ use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
 
+mod extra;
 mod repo;
+pub use extra::{
+    Deb, DebInput, DistUpgrade, Hold, HoldInput, Ppa, PpaInput, Update, UpdateInput, Upgrade, UpgradeInput,
+};
 pub use repo::{Repo, RepoInput, SourcesFile, SourcesFileInput};
 
 const APT_PREFIX: &str = "DEBIAN_FRONTEND=noninteractive apt-get -y";

@@ -4,6 +4,7 @@
 pub const USER_HOME_PATH_PREFIX: &str = "~/";
 pub(crate) const PROCESS_ID_COLUMN_HEADER: &str = "PID";
 pub(crate) const USER_NAME_IDENTIFIER: &str = "USER";
+pub(crate) const URL_SCHEME_SEPARATOR: &str = "://";
 pub(crate) const IGNORE_STDERR_AND_FAILURE: &str = "2>/dev/null || true";
 
 pub(crate) fn sha1_hex(value: &[u8]) -> String {

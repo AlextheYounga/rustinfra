@@ -19,9 +19,9 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 76%.
-- **Measured built-in catalog surface:** 287/380 symbols (75.53%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 93/186 source operations across 47 reference modules.
+- **Defensible pyinfra experience parity:** 81%.
+- **Measured built-in catalog surface:** 307/380 symbols (80.79%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 113/186 source operations across 49 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -60,8 +60,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 
 - [x] `apk` — repository updates, full and available upgrades, package install/removal/upgrades,
   pinned versions, fact parsing, and all reference fixtures.
-- [ ] **Partial** `apt` — packages, legacy repositories, and deb822 sources exist; keys and remaining
-  operations are outstanding.
+- [ ] **Partial** `apt` — package, repository, deb, PPA, hold, update, and upgrade behavior exists;
+  modern key management remains outstanding.
 - [x] `brew` — formula and cask convergence across old/new CLIs, repository updates, upgrades, taps,
   trust state, JSON/legacy package facts, shell-safe values, and all reference fixtures.
 - [x] `bsdinit` — service control, OpenBSD and FreeBSD boot enablement, rc.conf enablement for other
@@ -71,8 +71,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `choco` — Chocolatey installation, package convergence and upgrades, both facts, and all
   reference fixtures.
 - [ ] **Partial** `crontab` — core operation exists; complete fixture qualification is outstanding.
-- [ ] **Partial** `dnf` — package convergence exists; keys, repositories, and remaining operations
-  are outstanding.
+- [x] `dnf` — packages, keys, repositories, RPM files, updates, module streams, quoting, and
+  fixture-backed convergence.
 - [ ] **Missing** `docker`
 - [ ] **Partial** `files` — core state, transfers, templates, line editing, archives, and link
   discovery exist; remaining file operations are outstanding.
@@ -134,9 +134,11 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] **Missing** `vzctl`
 - [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
   self-updates, both facts, and all reference fixtures.
-- [ ] **Missing** `yum`
+- [x] `yum` — package and provider convergence, keys, repositories, RPM files, updates, and
+  fixture-backed command behavior.
 - [ ] **Missing** `zfs`
-- [ ] **Missing** `zypper`
+- [x] `zypper` — package convergence, global arguments, repositories, RPM files, updates, and
+  fixture-backed command behavior.
 
 ## Fact modules
 
