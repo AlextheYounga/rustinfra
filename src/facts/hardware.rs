@@ -6,6 +6,10 @@ use crate::api::StringCommand;
 
 use super::Fact;
 
+#[path = "hardware/network.rs"]
+mod network;
+pub use network::*;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum CpuValue {
     Text(String),

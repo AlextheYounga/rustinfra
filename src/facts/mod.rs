@@ -45,3 +45,5 @@ pub mod uv;
 pub mod xbps;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};
+
+pub(crate) const UNKNOWN_STATE: &str = "UNKNOWN";

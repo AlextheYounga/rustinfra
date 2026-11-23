@@ -5,6 +5,7 @@ use indexmap::IndexMap;
 use crate::api::{CommandBit, HiddenValue, StringCommand};
 
 use super::Fact;
+use super::UNKNOWN_STATE;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SupervisorctlOptions {
@@ -71,7 +72,7 @@ impl Fact for SupervisorctlStatus {
                 let running = match state {
                     "RUNNING" | "STARTING" => Some(Some(true)),
                     "STOPPED" | "STOPPING" | "EXITED" => Some(Some(false)),
-                    "BACKOFF" | "FATAL" | "UNKNOWN" => Some(None),
+                    "BACKOFF" | "FATAL" | UNKNOWN_STATE => Some(None),
                     _ => None,
                 }?;
                 Some((name.to_owned(), running))

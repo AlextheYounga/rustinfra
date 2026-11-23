@@ -80,12 +80,12 @@ gpg.GpgSecretKeys	present
 hardware.BlockDevices	present
 hardware.CpuInfo	present
 hardware.Cpus	present
-hardware.Ipv4Addresses	missing
-hardware.Ipv4Addrs	missing
-hardware.Ipv6Addresses	missing
-hardware.Ipv6Addrs	missing
+hardware.Ipv4Addresses	present
+hardware.Ipv4Addrs	present
+hardware.Ipv6Addresses	present
+hardware.Ipv6Addrs	present
 hardware.Memory	present
-hardware.NetworkDevices	missing
+hardware.NetworkDevices	present
 iptables.Ip6tablesChains	missing
 iptables.Ip6tablesRules	missing
 iptables.IptablesChains	present
