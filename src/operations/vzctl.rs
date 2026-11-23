@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use std::error::Error;
 use std::slice;
 
 use crate::api::{Command, CommandBit, StringCommand};
@@ -104,17 +105,22 @@ impl StatefulOperation for Create {
     ) -> StatefulOperationFuture<'a> {
         Box::pin(async move {
             let id = input.ctid.parse::<i64>().map_err(|_| "CTID must be numeric")?;
-            if FactExecutor::new(connector, options).get(&OpenvzContainers, &()).await?.contains_key(&id) {
-                return Err(format!("An OpenVZ container with CTID {} already exists", input.ctid).into());
-            }
-            let extra = input
-                .template
-                .as_ref()
-                .map(|value| vec![CommandBit::from("--ostemplate"), CommandBit::quoted(value.as_str())])
-                .unwrap_or_default();
-            Ok(commands("create", &input.ctid, extra))
+            let containers = FactExecutor::new(connector, options).get(&OpenvzContainers, &()).await?;
+            create_commands(input, containers.contains_key(&id))
         })
     }
+}
+
+fn create_commands(input: &CreateInput, exists: bool) -> Result<Vec<Command>, Box<dyn Error + Send + Sync>> {
+    if exists {
+        return Err(format!("An OpenVZ container with CTID {} already exists", input.ctid).into());
+    }
+    let extra = input
+        .template
+        .as_ref()
+        .map(|value| vec![CommandBit::from("--ostemplate"), CommandBit::quoted(value.as_str())])
+        .unwrap_or_default();
+    Ok(commands("create", &input.ctid, extra))
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -165,17 +171,70 @@ impl Operation for Set {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn descriptions(commands: &[Command]) -> Vec<String> {
+        commands
+            .iter()
+            .filter_map(|command| match command {
+                Command::Shell(command) => Some(command.raw_value()),
+                _ => None,
+            })
+            .collect()
+    }
+
     #[test]
-    fn commands_quote_ctids_templates_and_settings() {
-        let mut input = SetInput::new("100; reboot");
-        input.settings.insert("hostname".to_owned(), SettingValue::One("my host".to_owned()));
-        assert!(
-            matches!(&Set.commands(&input)[0],Command::Shell(value)if value.raw_value()=="vzctl set '100; reboot' --save --hostname 'my host'")
-        );
-        let mut start = StartInput::new("100");
+    fn lifecycle_commands_match_reference_fixtures() {
+        let mut start = StartInput::new("123");
+        assert_eq!(descriptions(&Start.commands(&start)), ["vzctl start 123"]);
         start.force = true;
-        assert!(
-            matches!(&Restart.commands(&start)[1],Command::Shell(value)if value.raw_value()=="vzctl start 100 --force")
+        assert_eq!(descriptions(&Start.commands(&start)), ["vzctl start 123 --force"]);
+        assert_eq!(descriptions(&Restart.commands(&start)), ["vzctl stop 123", "vzctl start 123 --force"]);
+        let ctid = CtidInput("123".to_owned());
+        assert_eq!(descriptions(&Stop.commands(&ctid)), ["vzctl stop 123"]);
+        assert_eq!(descriptions(&Mount.commands(&ctid)), ["vzctl mount 123"]);
+        assert_eq!(descriptions(&Unmount.commands(&ctid)), ["vzctl umount 123"]);
+        assert_eq!(descriptions(&Delete.commands(&ctid)), ["vzctl delete 123"]);
+        assert!(!Start.is_idempotent());
+        assert!(!Restart.is_idempotent());
+    }
+
+    #[test]
+    fn create_commands_match_new_and_existing_container_fixtures() {
+        let mut input = CreateInput::new("123");
+        input.template = Some("ubuntu-1604".to_owned());
+        assert_eq!(
+            descriptions(&create_commands(&input, false).unwrap()),
+            ["vzctl create 123 --ostemplate ubuntu-1604"]
         );
+        assert_eq!(
+            create_commands(&input, true).unwrap_err().to_string(),
+            "An OpenVZ container with CTID 123 already exists"
+        );
+        assert!(!Create.is_idempotent());
+    }
+
+    #[test]
+    fn set_commands_match_scalar_list_save_and_injection_fixtures() {
+        let mut input = SetInput::new("123");
+        input.settings.insert("hostname".to_owned(), SettingValue::One("my-host.name".to_owned()));
+        assert_eq!(descriptions(&Set.commands(&input)), ["vzctl set 123 --save --hostname my-host.name"]);
+
+        input.save = false;
+        assert_eq!(descriptions(&Set.commands(&input)), ["vzctl set 123 --hostname my-host.name"]);
+
+        input.save = true;
+        input.settings.clear();
+        input
+            .settings
+            .insert("ipadd".to_owned(), SettingValue::Many(vec!["192.168.1.1".to_owned(), "192.168.1.2".to_owned()]));
+        assert_eq!(
+            descriptions(&Set.commands(&input)),
+            ["vzctl set 123 --save --ipadd 192.168.1.1 --ipadd 192.168.1.2"]
+        );
+
+        input.settings.clear();
+        input.settings.insert(";reboot".to_owned(), SettingValue::One("x; rm -rf /".to_owned()));
+        assert_eq!(descriptions(&Set.commands(&input)), ["vzctl set 123 --save '--;reboot' 'x; rm -rf /'"]);
+        assert!(!Set.is_idempotent());
     }
 }

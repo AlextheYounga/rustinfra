@@ -153,30 +153,39 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parses_role_and_database_reference_rows() {
+    fn parses_complete_role_and_database_reference_rows() {
         let roles = PostgresqlRoles
             .process(
                 &[
-                    "rolname|rolsuper|rolconnlimit|rolvaliduntil|oid".to_owned(),
-                    "postgres|t|-1||10".to_owned(),
-                    "(1 row)".to_owned(),
+                    "rolname|rolsuper|rolinherit|rolcreaterole|rolcreatedb|rolcanlogin|rolreplication|rolconnlimit|rolpassword|rolvaliduntil|rolbypassrls|rolconfig|oid".to_owned(),
+                    "postgres|t|t|t|t|t|t|-1|********||t||10".to_owned(),
+                    "pyinfra|t|t|f|f|t|f|-1|********||f||16384".to_owned(),
+                    "(7 rows)".to_owned(),
                 ],
                 &PostgresqlConnection::default(),
             )
             .unwrap();
+        assert_eq!(roles.len(), 2);
         assert_eq!(roles["postgres"]["super"], PostgresqlValue::Boolean(true));
         assert_eq!(roles["postgres"]["oid"], PostgresqlValue::Integer(10));
+        assert_eq!(roles["pyinfra"]["createrole"], PostgresqlValue::Boolean(false));
+        assert_eq!(roles["pyinfra"]["validuntil"], PostgresqlValue::Null);
         let databases = PostgresqlDatabases
             .process(
                 &[
-                    "pg_encoding_to_char|datname|datdba|datistemplate|datallowconn|owner".to_owned(),
-                    "UTF8|postgres|10|f|t|postgres".to_owned(),
-                    "(1 row)".to_owned(),
+                    "pg_encoding_to_char|datname|datdba|encoding|datcollate|datctype|datistemplate|datallowconn|datconnlimit|datlastsysoid|datfrozenxid|datminmxid|dattablespace|datacl|owner".to_owned(),
+                    "UTF8|postgres|10|6|en_US.UTF-8|en_US.UTF-8|f|t|-1|13052|548|1|1663||postgres".to_owned(),
+                    "UTF8|pyinfra_stuff|16384|6|en_US.UTF-8|en_US.UTF-8|f|t|-1|13052|548|1|1663||pyinfra".to_owned(),
+                    "(4 rows)".to_owned(),
                 ],
                 &PostgresqlConnection::default(),
             )
             .unwrap();
+        assert_eq!(databases.len(), 2);
         assert_eq!(databases["postgres"]["encoding"], PostgresqlValue::Text("UTF8".to_owned()));
+        assert_eq!(databases["postgres"]["dba"], PostgresqlValue::Integer(10));
+        assert_eq!(databases["pyinfra_stuff"]["acl"], PostgresqlValue::Null);
+        assert_eq!(databases["pyinfra_stuff"]["owner"], PostgresqlValue::Text("pyinfra".to_owned()));
     }
 
     #[test]

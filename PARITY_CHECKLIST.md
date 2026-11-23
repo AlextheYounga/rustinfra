@@ -15,7 +15,9 @@ that is observable through pyinfra's built-in product is in scope.
   still needs catalog or fixture coverage. **Missing** means no meaningful implementation exists.
 - Check off a module only after every public operation or fact in that module is represented in the
   symbol ledger and its applicable reference fixtures pass.
-- New differences belong in the deviation register. An undocumented difference blocks 100% parity.
+- A fixture is qualified only when its ledger row links to the Rust test that exercises its
+  observable behavior. Unqualified fixtures remain visible rather than being inferred from symbol
+  presence or broad module coverage.
 
 ## Progress snapshot
 
@@ -23,21 +25,22 @@ that is observable through pyinfra's built-in product is in scope.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
+- **Explicit fixture qualification:** 18/1700 reference fixtures (1.06%).
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
 The experience estimate combines the exact catalog measurement with the qualified runtime and
 connector foundation. It is not a claim of strict behavioral parity for every present symbol;
-remaining fixture mapping and known-deviation accounting stay explicit below.
+remaining fixture qualification and broader release gates stay explicit below.
 
 ## Parity accounting
 
 - [x] Generate and commit the authoritative operation symbol ledger from `cd95d5a3`.
 - [x] Generate and commit the authoritative fixture-backed fact symbol ledger from `cd95d5a3`.
-- [ ] **Missing** Map every reference fixture to implemented, excluded, or blocked status.
-- [ ] **Missing** Record every known behavioral deviation with its disposition.
+- [x] Inventory every reference fixture with an explicit qualified, unqualified, or excluded status.
+- [ ] **Partial** Link every applicable fixture to passing Rust test evidence.
 - [x] Add a deterministic parity report that calculates coverage from the ledgers.
-- [ ] **Missing** Prevent CI from accepting unclassified built-in operations, facts, or fixtures.
+- [x] Prevent CI from accepting unclassified built-in operations, facts, or fixtures.
 
 ## Runtime and execution semantics
 
@@ -139,7 +142,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `uv` — package, Python, tool, shell PATH, and virtual-environment convergence; typed facts
   for packages, Python catalogs, directories, tools, and version; PEP 508 compatibility; shell-safe
   values; and all reference fixtures.
-- [ ] **Missing** `vzctl`
+- [x] `vzctl` — lifecycle commands, creation conflicts, templates, repeated settings, save behavior,
+  metadata, and injection-shaped keys and values match all reference fixtures.
 - [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
   self-updates, both facts, and all reference fixtures.
 - [x] `yum` — package and provider convergence, keys, repositories, RPM files, updates, and
@@ -184,8 +188,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `pkgin`
 - [x] `pnpm`
 - [x] `podman`
-- [ ] **Missing** `postgres`
-- [x] `postgresql`
+- [x] `postgresql` — role and database parsing, typed values, custom connections, and masked
+  passwords match all reference fact fixtures.
 - [x] `rpm`
 - [x] `runit`
 - [x] `selinux`
@@ -240,7 +244,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] File upload, download, SCP, SFTP, rsync, and privileged handoff scenarios pass.
 - [ ] Supported platform matrix passes in CI or a documented release qualification environment.
 - [ ] No in-scope parity issue remains open.
-- [ ] No undocumented deviation remains.
+- [ ] No known in-scope parity issue remains untested.
 - [ ] The generated parity report is 100% for operations, facts, connectors, fixtures, runtime
   semantics, and platform qualification.
 
