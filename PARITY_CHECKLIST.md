@@ -20,8 +20,8 @@ that is observable through pyinfra's built-in product is in scope.
 ## Progress snapshot
 
 - **Defensible pyinfra experience parity:** 96%.
-- **Measured built-in catalog surface:** 366/380 symbols (96.32%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 172/186 source operations across 55 reference modules.
+- **Measured built-in catalog surface:** 368/380 symbols (96.84%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 174/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
@@ -60,8 +60,8 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 
 - [x] `apk` — repository updates, full and available upgrades, package install/removal/upgrades,
   pinned versions, fact parsing, and all reference fixtures.
-- [ ] **Partial** `apt` — package, repository, deb, PPA, hold, update, and upgrade behavior exists;
-  modern key management remains outstanding.
+- [x] `apt` — packages, repositories, deb files, PPAs, holds, updates, upgrades, and modern
+  keyring management through the shared GPG implementation.
 - [x] `brew` — formula and cask convergence across old/new CLIs, repository updates, upgrades, taps,
   trust state, JSON/legacy package facts, shell-safe values, and all reference fixtures.
 - [x] `bsdinit` — service control, OpenBSD and FreeBSD boot enablement, rc.conf enablement for other
@@ -90,7 +90,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] **Partial** `iptables` — chains and rules exist; complete fixture qualification is outstanding.
 - [x] `launchd` — start, stop, restart-by-stop/start, status parsing, shell-safe service names, and
   all reference fixtures.
-- [ ] **Missing** `lxd`
+- [x] `lxd` — idempotent container launch, stop, and deletion using typed container state.
 - [x] `mysql` — databases, users, privileges, SQL, dumps, loads, TLS/X509 requirements, resource
   limits, typed current-state facts, secret masking, shell-safe values, and reference fixtures.
 - [x] `npm` — global and directory package install, removal, upgrades, pinned versions, fact

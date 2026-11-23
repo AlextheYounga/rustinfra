@@ -5,7 +5,7 @@ apk.upgrade	present
 apt.deb	present
 apt.dist_upgrade	present
 apt.hold	present
-apt.key	missing
+apt.key	present
 apt.packages	present
 apt.ppa	present
 apt.repo	present
@@ -70,7 +70,7 @@ gpg.key	present
 iptables.chain	present
 iptables.rule	present
 launchd.service	present
-lxd.container	missing
+lxd.container	present
 mysql.database	present
 mysql.dump	present
 mysql.load	present

@@ -272,6 +272,7 @@ impl Fact for AptHeldPackages {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AptKeys;
+pub const APT_KEYRING_DIRECTORIES: [&str; 3] = ["/etc/apt/trusted.gpg.d", "/etc/apt/keyrings", "/usr/share/keyrings"];
 impl Fact for AptKeys {
     type Input = Option<Vec<String>>;
     type Output = IndexMap<String, GpgKeyInfo>;
@@ -279,11 +280,14 @@ impl Fact for AptKeys {
         "apt.AptKeys"
     }
     fn command(&self, directories: &Self::Input) -> StringCommand {
-        GpgKeyrings.command(directories.as_ref().unwrap_or(&vec![
-            "/etc/apt/trusted.gpg.d".to_owned(),
-            "/etc/apt/keyrings".to_owned(),
-            "/usr/share/keyrings".to_owned(),
-        ]))
+        let defaults;
+        let directories = if let Some(directories) = directories {
+            directories
+        } else {
+            defaults = APT_KEYRING_DIRECTORIES.iter().map(|value| (*value).to_owned()).collect();
+            &defaults
+        };
+        GpgKeyrings.command(directories)
     }
     fn default(&self) -> Self::Output {
         IndexMap::new()

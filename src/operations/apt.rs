@@ -12,7 +12,8 @@ use super::{StatefulOperation, StatefulOperationFuture};
 mod extra;
 mod repo;
 pub use extra::{
-    Deb, DebInput, DistUpgrade, Hold, HoldInput, Ppa, PpaInput, Update, UpdateInput, Upgrade, UpgradeInput,
+    Deb, DebInput, DistUpgrade, Hold, HoldInput, Key, KeyInput, Ppa, PpaInput, Update, UpdateInput, Upgrade,
+    UpgradeInput,
 };
 pub use repo::{Repo, RepoInput, SourcesFile, SourcesFileInput};
 

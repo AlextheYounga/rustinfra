@@ -24,6 +24,7 @@ pub mod go;
 pub mod gpg;
 pub mod iptables;
 pub mod launchd;
+pub mod lxd;
 pub mod mysql;
 pub mod npm;
 pub mod openrc;

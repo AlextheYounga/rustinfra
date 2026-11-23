@@ -1,14 +1,107 @@
 use crate::api::{Command, CommandBit, StringCommand, URL_SCHEME_SEPARATOR, remote_temporary_filename};
 use crate::connectors::Connector;
-use crate::facts::apt::{AptHeldPackages, AptSimulation, SimulateOperationWillChange};
+use crate::facts::apt::{APT_KEYRING_DIRECTORIES, AptHeldPackages, AptSimulation, SimulateOperationWillChange};
 use crate::facts::deb::{DebPackage, DebPackageInfo, DebPackages, InstalledPackages};
 use crate::facts::files::{File, PathInfo, PathInput};
 use crate::facts::server::Date;
 use crate::facts::{FactExecutor, FactOptions};
+use crate::operations::gpg::{Key as GpgKey, KeyInput as GpgKeyInput};
 use crate::operations::{Operation, StatefulOperation, StatefulOperationFuture};
 
 const UPDATE_STAMP: &str = "/var/lib/apt/periodic/update-success-stamp";
 const APT_PREFIX: &str = "DEBIAN_FRONTEND=noninteractive apt-get -y";
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KeyInput {
+    pub source: Option<String>,
+    pub keyserver: Option<String>,
+    pub key_ids: Vec<String>,
+    pub destination: Option<String>,
+    pub present: bool,
+}
+impl Default for KeyInput {
+    fn default() -> Self {
+        Self { source: None, keyserver: None, key_ids: Vec::new(), destination: None, present: true }
+    }
+}
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Key;
+impl StatefulOperation for Key {
+    type Input = KeyInput;
+    fn name(&self) -> &'static str {
+        "apt.key"
+    }
+    fn is_idempotent(&self) -> bool {
+        true
+    }
+    fn commands<'a>(
+        &'a self,
+        input: &'a Self::Input,
+        connector: &'a dyn Connector,
+        options: &'a FactOptions,
+    ) -> StatefulOperationFuture<'a> {
+        Box::pin(async move {
+            let mut key = GpgKeyInput::default();
+            key.source = input.source.clone();
+            key.keyserver = input.keyserver.clone();
+            key.key_ids = input.key_ids.clone();
+            key.present = input.present;
+            key.destination = resolve_key_destination(input);
+            key.working_directories = if !input.present && key.destination.is_none() {
+                APT_KEYRING_DIRECTORIES.iter().map(|value| (*value).to_owned()).collect()
+            } else {
+                Vec::new()
+            };
+            GpgKey.commands(&key, connector, options).await
+        })
+    }
+}
+
+fn resolve_key_destination(input: &KeyInput) -> Option<String> {
+    if let Some(value) = &input.destination {
+        return Some(if value.starts_with('/') {
+            ensure_gpg(value)
+        } else {
+            format!("/etc/apt/keyrings/{}", ensure_gpg(value))
+        });
+    }
+    if !input.present && !input.key_ids.is_empty() && input.source.is_none() && input.keyserver.is_none() {
+        return None;
+    }
+    let base = if let Some(source) = &input.source {
+        derive_source_name(source)
+    } else if !input.key_ids.is_empty() {
+        format!("keyserver-{}", sanitize(&input.key_ids.join("-")))
+    } else {
+        "apt-key".to_owned()
+    };
+    Some(format!("/etc/apt/keyrings/{base}.gpg"))
+}
+fn ensure_gpg(value: &str) -> String {
+    if value.ends_with(".gpg") { value.to_owned() } else { format!("{value}.gpg") }
+}
+fn derive_source_name(source: &str) -> String {
+    let without_scheme = source.split_once(URL_SCHEME_SEPARATOR);
+    if let Some((_, rest)) = without_scheme {
+        let (host, path) = rest.split_once('/').unwrap_or((rest, "key"));
+        let name = path.rsplit('/').next().unwrap_or("key").trim_end_matches(".asc").trim_end_matches(".gpg");
+        format!("{}-{}", sanitize(&host.replace(':', "_")), sanitize(if name.is_empty() { "key" } else { name }))
+    } else {
+        sanitize(source.rsplit('/').next().unwrap_or(source).trim_end_matches(".asc").trim_end_matches(".gpg"))
+    }
+}
+fn sanitize(value: &str) -> String {
+    let mut output = String::new();
+    for character in value.trim().to_lowercase().chars() {
+        if character.is_alphanumeric() || matches!(character, '_' | '.' | '-') {
+            output.push(character);
+        } else if !output.ends_with('_') {
+            output.push('_');
+        }
+    }
+    let output = output.trim_matches(['_', '.']).to_owned();
+    if output.is_empty() { "apt-keyring".to_owned() } else { output }
+}
 
 fn apt_command(action: &str, wait_seconds: Option<u64>, force: bool) -> Command {
     let mut bits = vec![raw(APT_PREFIX)];
@@ -300,25 +393,5 @@ fn shell(bits: impl IntoIterator<Item = CommandBit>) -> Command {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use indexmap::IndexMap;
-    #[test]
-    fn ppa_upgrade_hold_and_deb_commands_match_reference_shapes() {
-        assert!(
-            matches!(&Ppa.commands(&PpaInput::new("x\"; reboot #"))[0], Command::Shell(command) if command.raw_value() == "apt-add-repository -y 'x\"; reboot #'")
-        );
-        assert!(simulated_upgrade("upgrade", None, Some(AptSimulation::default())).is_empty());
-        assert!(
-            matches!(&simulated_upgrade("dist-upgrade --autoremove", Some(60), None)[0], Command::Shell(command) if command.raw_value().contains("DPkg::Lock::Timeout=60"))
-        );
-        let deb = DebInput::new("unsafe package.deb");
-        let info = DebPackageInfo { name: Some("test".to_owned()), version: Some("2".to_owned()) };
-        let installed = IndexMap::from([("test".to_owned(), vec!["1".to_owned()])]);
-        let commands =
-            deb_commands(&deb, DebState { temporary: None, package: &deb.source, info: &info, installed: &installed });
-        assert!(
-            matches!(&commands[0], Command::Shell(command) if command.raw_value().contains("-i 'unsafe package.deb'"))
-        );
-    }
-}
+#[path = "extra_tests.rs"]
+mod tests;
