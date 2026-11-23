@@ -7,9 +7,11 @@ use super::Fact;
 
 mod linux_distribution;
 mod sysctl;
+mod system;
 mod users;
 pub use linux_distribution::{LinuxDistribution, LinuxDistributionInfo};
 pub use sysctl::{Sysctl, SysctlInput, SysctlValue};
+pub use system::*;
 pub use users::{UserInfo, Users};
 
 const TEMP_DIRECTORY_COMMAND: &str = "if [ -n \"$TMPDIR\" ] && [ -d \"$TMPDIR\" ] && [ -w \"$TMPDIR\" ]; then\n    echo \"$TMPDIR\";\nelif [ -n \"$TMP\" ] && [ -d \"$TMP\" ] && [ -w \"$TMP\" ]; then\n    echo \"$TMP\";\nelif [ -n \"$TEMP\" ] && [ -d \"$TEMP\" ] && [ -w \"$TEMP\" ]; then\n    echo \"$TEMP\";\nelse\n    echo \"\";\nfi";
@@ -61,7 +63,7 @@ pub(crate) fn is_bsd(os: Option<&str>) -> bool {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct HomeInput(String);
+pub struct HomeInput(pub(crate) String);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UnsafeHomeUser(String);
