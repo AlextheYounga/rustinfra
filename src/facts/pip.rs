@@ -52,6 +52,27 @@ impl Fact for PipPackages {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Pip3Packages;
+
+impl Fact for Pip3Packages {
+    type Input = ();
+    type Output = PipPackageMap;
+
+    fn name(&self) -> &'static str {
+        "pip.Pip3Packages"
+    }
+    fn command(&self, _input: &Self::Input) -> StringCommand {
+        StringCommand::new(["pip3 freeze"])
+    }
+    fn default(&self) -> Self::Output {
+        PipPackageMap::new()
+    }
+    fn process(&self, output: &[String], _input: &Self::Input) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        PipPackages.process(output, &PipPackagesInput::default())
+    }
+}
+
 fn valid_package_name(value: &str) -> bool {
     !value.is_empty()
         && value.bytes().all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'+' | b'.'))

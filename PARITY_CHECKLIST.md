@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 55%.
-- **Measured built-in catalog surface:** 210/380 symbols (55.26%); see `PARITY_REPORT.md`.
-- **Rust operation surface:** 92/186 source operations across 47 reference modules.
-- **Rust fact surface:** 118/194 fixture-backed facts across 50 reference modules.
+- **Defensible pyinfra experience parity:** 56%.
+- **Measured built-in catalog surface:** 212/380 symbols (55.79%); see `PARITY_REPORT.md`.
+- **Rust operation surface:** 93/186 source operations across 47 reference modules.
+- **Rust fact surface:** 119/194 fixture-backed facts across 50 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -98,8 +98,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
   fixtures.
 - [x] `pacman` — repository updates, full upgrades, package and group install/removal, both facts,
   shell-safe group lookup, and all reference fixtures.
-- [ ] **Partial** `pip` — virtual environments and packages exist; aliases and complete fixture
-  qualification remain.
+- [x] `pip` — virtualenv and venv creation/removal, package and requirements convergence, pip/pip3 facts, and reference fixtures.
 - [x] `pipx` — PEP 508 package install/removal, upgrades, PATH setup, environment and package facts,
   shell-safe extra arguments, and all reference fixtures.
 - [x] `pkg` — FreeBSD and OpenBSD command selection, install/removal, automatic and explicit
@@ -169,7 +168,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `openrc`
 - [x] `opkg`
 - [x] `pacman`
-- [ ] **Partial** `pip`
+- [x] `pip`
 - [x] `pipx`
 - [x] `pkg`
 - [x] `pkgin`

@@ -55,6 +55,32 @@ impl StatefulOperation for Virtualenv {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Venv;
+
+impl StatefulOperation for Venv {
+    type Input = VirtualenvInput;
+
+    fn name(&self) -> &'static str {
+        "pip.venv"
+    }
+    fn is_idempotent(&self) -> bool {
+        true
+    }
+    fn commands<'a>(
+        &'a self,
+        input: &'a Self::Input,
+        connector: &'a dyn Connector,
+        fact_options: &'a FactOptions,
+    ) -> StatefulOperationFuture<'a> {
+        Box::pin(async move {
+            let mut input = input.clone();
+            input.venv = true;
+            Virtualenv.commands(&input, connector, fact_options).await
+        })
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PackagesInput {
     pub packages: Vec<String>,

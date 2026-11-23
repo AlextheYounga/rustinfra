@@ -105,7 +105,7 @@ opkg.OpkgPackages	present
 opkg.OpkgUpgradeablePackages	present
 pacman.PacmanPackages	present
 pacman.PacmanUnpackGroup	present
-pip.Pip3Packages	missing
+pip.Pip3Packages	present
 pip.PipPackages	present
 pipx.PipxEnvironment	present
 pipx.PipxPackages	present

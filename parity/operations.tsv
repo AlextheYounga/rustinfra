@@ -85,7 +85,7 @@ pacman.packages	present
 pacman.update	present
 pacman.upgrade	present
 pip.packages	present
-pip.venv	missing
+pip.venv	present
 pip.virtualenv	present
 pipx.ensure_path	present
 pipx.packages	present
