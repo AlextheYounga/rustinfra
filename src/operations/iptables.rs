@@ -304,56 +304,5 @@ pub enum IptablesOperationError {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ChainInput, PreparedRule, RuleInput, chain_commands, rule_commands};
-    use crate::api::Command;
-    use crate::facts::iptables::IpVersion;
-
-    fn descriptions(commands: &[Command]) -> Vec<String> {
-        commands
-            .iter()
-            .filter_map(|command| match command {
-                Command::Shell(command) => Some(command.raw_value()),
-                _ => None,
-            })
-            .collect()
-    }
-
-    #[test]
-    fn chain_creation_and_policy_changes_are_independently_convergent() {
-        let mut input = ChainInput::new("APP INPUT");
-        input.policy = Some("DROP".to_owned());
-        assert_eq!(
-            descriptions(&chain_commands(&input, None)),
-            ["iptables -t filter -N 'APP INPUT'", "iptables -t filter -P 'APP INPUT' DROP"]
-        );
-        assert_eq!(descriptions(&chain_commands(&input, Some("ACCEPT"))), ["iptables -t filter -P 'APP INPUT' DROP"]);
-    }
-
-    #[test]
-    fn rule_builds_safe_ipv6_nat_and_comment_arguments_and_noops_when_present() {
-        let mut input = RuleInput::new("PREROUTING", "DNAT");
-        input.version = IpVersion::V6;
-        input.table = "nat".to_owned();
-        input.protocol = Some("TCP".to_owned());
-        input.source = Some("2001:db8::/32".to_owned());
-        input.destination_port = Some("443; bad".to_owned());
-        input.comment = Some("web app".to_owned());
-        input.to_destination = Some("[2001:db8::2]:8443".to_owned());
-        let prepared = PreparedRule::new(&input).unwrap();
-        assert_eq!(
-            descriptions(&rule_commands(&input, &prepared, false)),
-            [
-                "ip6tables -t nat -A PREROUTING -p tcp -s 2001:db8::/32 --dport '443; bad' -m comment --comment 'web app' -j DNAT --to-destination '[2001:db8::2]:8443'"
-            ]
-        );
-        assert!(rule_commands(&input, &prepared, true).is_empty());
-    }
-
-    #[test]
-    fn ports_without_protocol_are_rejected() {
-        let mut input = RuleInput::new("INPUT", "DROP");
-        input.destination_port = Some("22".to_owned());
-        assert!(PreparedRule::new(&input).is_err());
-    }
-}
+#[path = "iptables_tests.rs"]
+mod tests;

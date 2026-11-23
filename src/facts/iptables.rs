@@ -24,6 +24,7 @@ mod ipv6_tests {
             Some("INPUT")
         );
         assert_eq!(Ip6tablesChains.process(&[":INPUT ACCEPT [0:0]".to_owned()], &table).unwrap()["INPUT"], "ACCEPT");
+        assert_eq!(Ip6tablesChains.command(&"nat".to_owned()).raw_value(), "ip6tables-save -t nat");
     }
 }
 
@@ -273,7 +274,7 @@ fn set_known_field(definition: &mut RuleDefinition, flag: &str, value: &str, neg
 
 #[cfg(test)]
 mod tests {
-    use super::{Fact, IpVersion, IptablesInput, IptablesRules};
+    use super::{Fact, IpVersion, IptablesChains, IptablesInput, IptablesRules};
 
     #[test]
     fn parses_negation_quotes_nat_and_extension_arguments() {
@@ -292,6 +293,17 @@ mod tests {
         assert_eq!(
             IptablesRules.command(&IptablesInput { table: "nat table".to_owned(), version: IpVersion::V6 }).raw_value(),
             "ip6tables-save -t 'nat table'"
+        );
+        let chains = IptablesChains
+            .process(&[":INPUT ACCEPT [1:2]".to_owned(), ":FORWARD DROP [0:0]".to_owned()], &IptablesInput::default())
+            .unwrap();
+        assert_eq!(chains["INPUT"], "ACCEPT");
+        assert_eq!(chains["FORWARD"], "DROP");
+        assert_eq!(
+            IptablesChains
+                .command(&IptablesInput { table: "filter; reboot".to_owned(), version: IpVersion::V4 })
+                .raw_value(),
+            "iptables-save -t 'filter; reboot'"
         );
     }
 }

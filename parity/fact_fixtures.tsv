@@ -230,12 +230,12 @@ hardware.NetworkDevices/linux_ip_json_no_prefixlen_ok.json	unqualified
 hardware.NetworkDevices/linux_ip_multiple_addrs.json	unqualified	
 hardware.NetworkDevices/linux_ip_multiple_ifaces.json	unqualified	
 hardware.NetworkDevices/macos_ifconfig.json	unqualified	
-iptables.Ip6tablesChains/chains.json	unqualified	
-iptables.Ip6tablesChains/nat_table.yaml	unqualified	
-iptables.Ip6tablesRules/rules.json	unqualified	
-iptables.IptablesChains/chains.json	unqualified	
-iptables.IptablesChains/table_quotes_injection.yaml	unqualified	
-iptables.IptablesRules/rules.json	unqualified	
+iptables.Ip6tablesChains/chains.json	qualified	src/facts/iptables.rs::ipv6_facts_fix_the_command_family
+iptables.Ip6tablesChains/nat_table.yaml	qualified	src/facts/iptables.rs::ipv6_facts_fix_the_command_family
+iptables.Ip6tablesRules/rules.json	qualified	src/facts/iptables.rs::ipv6_facts_fix_the_command_family
+iptables.IptablesChains/chains.json	qualified	src/facts/iptables.rs::parses_negation_quotes_nat_and_extension_arguments
+iptables.IptablesChains/table_quotes_injection.yaml	qualified	src/facts/iptables.rs::parses_negation_quotes_nat_and_extension_arguments
+iptables.IptablesRules/rules.json	qualified	src/facts/iptables.rs::parses_negation_quotes_nat_and_extension_arguments
 launchd.LaunchdStatus/services.json	unqualified	
 lxd.LxdContainers/stripped.json	unqualified	
 mysql.MysqlDatabases/custom_connection_quotes_injection.json	unqualified	

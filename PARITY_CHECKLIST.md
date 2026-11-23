@@ -25,7 +25,7 @@ that is observable through pyinfra's built-in product is in scope.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
-- **Explicit fixture qualification:** 140/1700 reference fixtures (8.24%).
+- **Explicit fixture qualification:** 169/1700 reference fixtures (9.94%).
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
@@ -91,7 +91,8 @@ remaining fixture qualification and broader release gates stay explicit below.
   all reference fixtures.
 - [x] `gpg` — local, URL, and keyserver installs, dearmoring, fingerprint-aware convergence,
   binary and armored keyring removal, permissions, validation, and shell-safe values.
-- [ ] **Partial** `iptables` — chains and rules exist; complete fixture qualification is outstanding.
+- [x] `iptables` — IPv4/IPv6 chains and rules, NAT targets, negation, extensions, comments,
+  insertion/removal/no-op paths, validation errors, and shell quoting match all reference fixtures.
 - [x] `launchd` — start, stop, restart-by-stop/start, status parsing, shell-safe service names, and
   all reference fixtures.
 - [x] `lxd` — idempotent container launch, stop, and deletion using typed container state.
