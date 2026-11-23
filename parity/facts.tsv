@@ -20,9 +20,9 @@ choco.ChocoVersion	present
 crontab.Crontab	present
 deb.DebPackage	missing
 deb.DebPackages	present
-dnf.DnfDisabledModules	missing
-dnf.DnfEnabledModules	missing
-dnf.DnfRepositories	missing
+dnf.DnfDisabledModules	present
+dnf.DnfEnabledModules	present
+dnf.DnfRepositories	present
 docker.DockerAuths	present
 docker.DockerContainer	present
 docker.DockerContainerEnvs	present
@@ -186,10 +186,10 @@ uv.UvVersion	present
 vzctl.OpenvzContainers	missing
 xbps.XbpsPackages	present
 xbps.XbpsSelfUpdate	present
-yum.YumRepositories	missing
+yum.YumRepositories	present
 zfs.Datasets	present
 zfs.Filesystems	present
 zfs.Pools	present
 zfs.Snapshots	present
 zfs.Volumes	present
-zypper.ZypperRepositories	missing
+zypper.ZypperRepositories	present

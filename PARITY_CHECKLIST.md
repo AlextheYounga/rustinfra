@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 69%.
-- **Measured built-in catalog surface:** 262/380 symbols (68.95%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 70%.
+- **Measured built-in catalog surface:** 267/380 symbols (70.26%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 93/186 source operations across 47 reference modules.
-- **Rust fact surface:** 169/194 fixture-backed facts across 54 reference modules.
+- **Rust fact surface:** 174/194 fixture-backed facts across 57 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -73,7 +73,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] **Partial** `crontab` — core operation exists; complete fixture qualification is outstanding.
 - [ ] **Partial** `dnf` — package convergence exists; keys, repositories, and remaining operations
   are outstanding.
-- [x] `docker`
+- [ ] **Missing** `docker`
 - [ ] **Partial** `files` — core state, transfers, templates, line editing, archives, and link
   discovery exist; remaining file operations are outstanding.
 - [x] `flatpak` — system/user package installation and removal, optional remotes, package metadata,
@@ -135,21 +135,21 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `xbps` — repository updates, full upgrades, package install/removal, required package-manager
   self-updates, both facts, and all reference fixtures.
 - [ ] **Missing** `yum`
-- [x] `zfs`
+- [ ] **Missing** `zfs`
 - [ ] **Missing** `zypper`
 
 ## Fact modules
 
 - [x] `apk`
-- [ ] **Partial** `apt`
+- [x] `apt`
 - [x] `brew`
 - [x] `bsdinit`
 - [x] `cargo`
 - [x] `choco`
 - [ ] **Partial** `crontab`
 - [ ] **Partial** `deb`
-- [ ] **Missing** `dnf`
-- [ ] **Missing** `docker`
+- [x] `dnf`
+- [x] `docker`
 - [x] `efibootmgr`
 - [ ] **Partial** `files`
 - [x] `flatpak`
@@ -158,12 +158,11 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [ ] **Partial** `git`
 - [x] `go`
 - [x] `gpg`
-- [ ] **Partial** `hardware` — CPU information/count, memory, and block devices are covered;
-  network device and address projections remain outstanding.
+- [x] `hardware`
 - [ ] **Partial** `iptables`
 - [x] `launchd`
 - [ ] **Missing** `lxd`
-- [ ] **Missing** `mysql`
+- [x] `mysql`
 - [x] `npm`
 - [x] `openrc`
 - [x] `opkg`
@@ -175,7 +174,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `pnpm`
 - [x] `podman`
 - [ ] **Missing** `postgres`
-- [ ] **Missing** `postgresql`
+- [x] `postgresql`
 - [ ] **Partial** `rpm`
 - [x] `runit`
 - [x] `selinux`
@@ -188,9 +187,9 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `uv`
 - [ ] **Missing** `vzctl`
 - [x] `xbps`
-- [ ] **Missing** `yum`
-- [ ] **Missing** `zfs`
-- [ ] **Missing** `zypper`
+- [x] `yum`
+- [x] `zfs`
+- [x] `zypper`
 
 ## Built-in connectors
 

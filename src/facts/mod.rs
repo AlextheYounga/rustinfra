@@ -8,6 +8,7 @@ pub mod cargo;
 pub mod choco;
 pub mod crontab;
 pub mod deb;
+pub mod dnf;
 pub mod docker;
 pub mod efibootmgr;
 mod executor;
@@ -45,7 +46,9 @@ pub mod sysvinit;
 pub mod upstart;
 pub mod uv;
 pub mod xbps;
+pub mod yum;
 pub mod zfs;
+pub mod zypper;
 
 pub use executor::{Fact, FactError, FactExecutor, FactOptions, Phase};
 
