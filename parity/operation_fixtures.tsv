@@ -194,14 +194,14 @@ docker.build/build_single_tag_new.json	unqualified
 docker.build/build_target_platform_pull_nocache.json	unqualified	
 docker.build/build_with_build_args_and_labels.json	unqualified	
 docker.build/build_with_buildx.json	unqualified	
-docker.compose/compose_down.json	unqualified	
-docker.compose/compose_down_with_volumes.json	unqualified	
-docker.compose/compose_up_basic.json	unqualified	
-docker.compose/compose_up_full_flags.json	unqualified	
-docker.compose/compose_up_multi_file.json	unqualified	
-docker.compose/compose_up_single_file.json	unqualified	
-docker.compose/compose_up_with_project_and_pull.json	unqualified	
-docker.compose/compose_v1.json	unqualified	
+docker.compose/compose_down.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_down_with_volumes.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_up_basic.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_up_full_flags.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_up_multi_file.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_up_single_file.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_up_with_project_and_pull.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
+docker.compose/compose_v1.json	qualified	src/operations/docker/commands_tests.rs::compose_matches_up_down_file_project_pull_and_v1_fixtures
 docker.container/add_and_start_no_existent_container.json	unqualified	
 docker.container/add_container_quotes_injection.json	unqualified	
 docker.container/add_container_with_all_new_options.json	unqualified	
@@ -223,11 +223,11 @@ docker.container/add_no_existent_container.json	unqualified
 docker.container/remove_container.json	unqualified	
 docker.container/start_container.json	unqualified	
 docker.container/stop_container.json	unqualified	
-docker.container_exec/argv_with_options.yaml	unqualified	
-docker.container_exec/flags.yaml	unqualified	
-docker.container_exec/missing_command.yaml	unqualified	
-docker.container_exec/quotes_injection.yaml	unqualified	
-docker.container_exec/shell_command.yaml	unqualified	
+docker.container_exec/argv_with_options.yaml	qualified	src/operations/docker/commands_tests.rs::container_exec_matches_argv_flags_shell_quoting_and_validation_fixtures
+docker.container_exec/flags.yaml	qualified	src/operations/docker/commands_tests.rs::container_exec_matches_argv_flags_shell_quoting_and_validation_fixtures
+docker.container_exec/missing_command.yaml	qualified	src/operations/docker/commands_tests.rs::container_exec_matches_argv_flags_shell_quoting_and_validation_fixtures
+docker.container_exec/quotes_injection.yaml	qualified	src/operations/docker/commands_tests.rs::container_exec_matches_argv_flags_shell_quoting_and_validation_fixtures
+docker.container_exec/shell_command.yaml	qualified	src/operations/docker/commands_tests.rs::container_exec_matches_argv_flags_shell_quoting_and_validation_fixtures
 docker.image/force_pull_image.json	unqualified	
 docker.image/image_from_github_registry_exists.json	unqualified	
 docker.image/image_with_digest_exists.json	unqualified	
@@ -265,9 +265,9 @@ docker.plugin/install_plugin_with_alias_and_options.json	qualified	src/operation
 docker.plugin/remove_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_commands_match_install_remove_enable_and_option_fixtures
 docker.plugin/set_plugin_options.json	qualified	src/operations/docker/plugin.rs::plugin_option_changes_disable_set_and_restore_requested_state
 docker.plugin/set_plugin_options_disabled_plugin.json	qualified	src/operations/docker/plugin.rs::plugin_option_changes_disable_set_and_restore_requested_state
-docker.prune/prune_all_and_volumes.json	unqualified	
-docker.prune/prune_default.json	unqualified	
-docker.prune/prune_with_filter.json	unqualified	
+docker.prune/prune_all_and_volumes.json	qualified	src/operations/docker/commands_tests.rs::prune_matches_default_all_volume_and_filter_fixtures
+docker.prune/prune_default.json	qualified	src/operations/docker/commands_tests.rs::prune_matches_default_all_volume_and_filter_fixtures
+docker.prune/prune_with_filter.json	qualified	src/operations/docker/commands_tests.rs::prune_matches_default_all_volume_and_filter_fixtures
 docker.volume/add_volume.json	unqualified	
 docker.volume/add_volume_with_driver.json	unqualified	
 docker.volume/add_volume_with_labels.json	unqualified	
