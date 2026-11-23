@@ -12,6 +12,21 @@ pub enum IpVersion {
     V6,
 }
 
+#[cfg(test)]
+mod ipv6_tests {
+    use super::{Fact, Ip6tablesChains, Ip6tablesRules};
+    #[test]
+    fn ipv6_facts_fix_the_command_family() {
+        let table = "filter".to_owned();
+        assert_eq!(Ip6tablesRules.command(&table).raw_value(), "ip6tables-save -t filter");
+        assert_eq!(
+            Ip6tablesRules.process(&["-A INPUT -j ACCEPT".to_owned()], &table).unwrap()[0].chain.as_deref(),
+            Some("INPUT")
+        );
+        assert_eq!(Ip6tablesChains.process(&[":INPUT ACCEPT [0:0]".to_owned()], &table).unwrap()["INPUT"], "ACCEPT");
+    }
+}
+
 impl IpVersion {
     fn save_command(self) -> &'static str {
         match self {
@@ -121,6 +136,50 @@ impl Fact for IptablesChains {
             })
             .collect();
         Ok(chains)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Ip6tablesRules;
+impl Fact for Ip6tablesRules {
+    type Input = String;
+    type Output = Vec<RuleDefinition>;
+    fn name(&self) -> &'static str {
+        "iptables.Ip6tablesRules"
+    }
+    fn command(&self, table: &String) -> StringCommand {
+        IptablesRules.command(&IptablesInput { table: table.clone(), version: IpVersion::V6 })
+    }
+    fn default(&self) -> Self::Output {
+        Vec::new()
+    }
+    fn requires_command(&self, _: &String) -> Option<&str> {
+        Some("ip6tables-save")
+    }
+    fn process(&self, output: &[String], table: &String) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        IptablesRules.process(output, &IptablesInput { table: table.clone(), version: IpVersion::V6 })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Ip6tablesChains;
+impl Fact for Ip6tablesChains {
+    type Input = String;
+    type Output = IndexMap<String, String>;
+    fn name(&self) -> &'static str {
+        "iptables.Ip6tablesChains"
+    }
+    fn command(&self, table: &String) -> StringCommand {
+        IptablesChains.command(&IptablesInput { table: table.clone(), version: IpVersion::V6 })
+    }
+    fn default(&self) -> Self::Output {
+        IndexMap::new()
+    }
+    fn requires_command(&self, _: &String) -> Option<&str> {
+        Some("ip6tables-save")
+    }
+    fn process(&self, output: &[String], table: &String) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        IptablesChains.process(output, &IptablesInput { table: table.clone(), version: IpVersion::V6 })
     }
 }
 

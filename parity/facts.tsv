@@ -18,7 +18,7 @@ cargo.CargoPackages	present
 choco.ChocoPackages	present
 choco.ChocoVersion	present
 crontab.Crontab	present
-deb.DebPackage	missing
+deb.DebPackage	present
 deb.DebPackages	present
 dnf.DnfDisabledModules	present
 dnf.DnfEnabledModules	present
@@ -71,7 +71,7 @@ git.GitConfig	present
 git.GitLocalCommit	present
 git.GitRemoteBranchCommit	present
 git.GitTag	present
-git.GitTrackingBranch	missing
+git.GitTrackingBranch	present
 go.GoPackages	present
 gpg.GpgKey	present
 gpg.GpgKeyrings	present
@@ -86,12 +86,12 @@ hardware.Ipv6Addresses	present
 hardware.Ipv6Addrs	present
 hardware.Memory	present
 hardware.NetworkDevices	present
-iptables.Ip6tablesChains	missing
-iptables.Ip6tablesRules	missing
+iptables.Ip6tablesChains	present
+iptables.Ip6tablesRules	present
 iptables.IptablesChains	present
 iptables.IptablesRules	present
 launchd.LaunchdStatus	present
-lxd.LxdContainers	missing
+lxd.LxdContainers	present
 mysql.MysqlDatabases	present
 mysql.MysqlUserGrants	present
 mysql.MysqlUsers	present
@@ -123,8 +123,8 @@ podman.PodmanSystemInfo	present
 podman.PodmanVolumes	present
 postgresql.PostgresqlDatabases	present
 postgresql.PostgresqlRoles	present
-rpm.RpmPackage	missing
-rpm.RpmPackageProvides	missing
+rpm.RpmPackage	present
+rpm.RpmPackageProvides	present
 rpm.RpmPackages	present
 runit.RunitManaged	present
 runit.RunitStatus	present
@@ -183,7 +183,7 @@ uv.UvPythonDir	present
 uv.UvToolDir	present
 uv.UvTools	present
 uv.UvVersion	present
-vzctl.OpenvzContainers	missing
+vzctl.OpenvzContainers	present
 xbps.XbpsPackages	present
 xbps.XbpsSelfUpdate	present
 yum.YumRepositories	present

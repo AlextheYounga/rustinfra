@@ -12,6 +12,21 @@ pub struct GitRepoInput {
     pub safe_directory: Option<String>,
 }
 
+#[cfg(test)]
+mod tracking_tests {
+    use super::{Fact, GitRepoInput, GitTrackingBranch};
+    #[test]
+    fn tracking_branch_ignores_ahead_and_behind_suffixes() {
+        let input = GitRepoInput::new("my repo");
+        assert!(GitTrackingBranch.command(&input).raw_value().contains("git status --branch --porcelain"));
+        assert_eq!(
+            GitTrackingBranch.process(&["## branch...origin/main [behind 2]".to_owned()], &input).unwrap().as_deref(),
+            Some("origin/main")
+        );
+        assert_eq!(GitTrackingBranch.process(&["## branch".to_owned()], &input).unwrap(), None);
+    }
+}
+
 impl GitRepoInput {
     #[must_use]
     pub fn new(repo: impl Into<String>) -> Self {
@@ -95,6 +110,34 @@ impl Fact for GitBranch {
 
     fn process(&self, output: &[String], _input: &Self::Input) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
         Ok((!output.is_empty()).then(|| output.join("\n").replace("heads/", "").replace("tags/", "")))
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct GitTrackingBranch;
+impl Fact for GitTrackingBranch {
+    type Input = GitRepoInput;
+    type Output = Option<String>;
+    fn name(&self) -> &'static str {
+        "git.GitTrackingBranch"
+    }
+    fn command(&self, input: &GitRepoInput) -> StringCommand {
+        repo_command(
+            input,
+            vec![CommandBit::from("status"), CommandBit::from("--branch"), CommandBit::from("--porcelain")],
+        )
+    }
+    fn default(&self) -> Self::Output {
+        None
+    }
+    fn requires_command(&self, _: &GitRepoInput) -> Option<&str> {
+        Some("git")
+    }
+    fn process(&self, output: &[String], _: &GitRepoInput) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
+        Ok(output
+            .first()
+            .and_then(|line| line.split_once("..."))
+            .map(|(_, tracking)| tracking.split_whitespace().next().unwrap_or_default().to_owned()))
     }
 }
 

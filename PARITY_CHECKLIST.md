@@ -19,10 +19,10 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 70%.
-- **Measured built-in catalog surface:** 267/380 symbols (70.26%); see `PARITY_REPORT.md`.
+- **Defensible pyinfra experience parity:** 72%.
+- **Measured built-in catalog surface:** 275/380 symbols (72.37%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 93/186 source operations across 47 reference modules.
-- **Rust fact surface:** 174/194 fixture-backed facts across 57 reference modules.
+- **Rust fact surface:** 182/194 fixture-backed facts across 59 reference modules.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest gap:** operation and fact catalog breadth.
 
@@ -147,7 +147,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `cargo`
 - [x] `choco`
 - [ ] **Partial** `crontab`
-- [ ] **Partial** `deb`
+- [x] `deb`
 - [x] `dnf`
 - [x] `docker`
 - [x] `efibootmgr`
@@ -155,13 +155,13 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `flatpak`
 - [x] `freebsd`
 - [x] `gem`
-- [ ] **Partial** `git`
+- [x] `git`
 - [x] `go`
 - [x] `gpg`
 - [x] `hardware`
-- [ ] **Partial** `iptables`
+- [x] `iptables`
 - [x] `launchd`
-- [ ] **Missing** `lxd`
+- [x] `lxd`
 - [x] `mysql`
 - [x] `npm`
 - [x] `openrc`
@@ -175,7 +175,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `podman`
 - [ ] **Missing** `postgres`
 - [x] `postgresql`
-- [ ] **Partial** `rpm`
+- [x] `rpm`
 - [x] `runit`
 - [x] `selinux`
 - [ ] **Partial** `server`
@@ -185,7 +185,7 @@ remaining fixture mapping and known-deviation accounting stay explicit below.
 - [x] `sysvinit`
 - [x] `upstart`
 - [x] `uv`
-- [ ] **Missing** `vzctl`
+- [x] `vzctl`
 - [x] `xbps`
 - [x] `yum`
 - [x] `zfs`
