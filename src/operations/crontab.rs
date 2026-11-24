@@ -107,6 +107,16 @@ impl StatefulOperation for Crontab {
 }
 
 fn crontab_commands(input: &CrontabInput, state: &CrontabFile, temporary: &str) -> Vec<Command> {
+    let backup_extension = chrono::Local::now().format("%y%m%d%H%M").to_string();
+    crontab_commands_with_backup(input, state, temporary, &backup_extension)
+}
+
+fn crontab_commands_with_backup(
+    input: &CrontabInput,
+    state: &CrontabFile,
+    temporary: &str,
+    backup_extension: &str,
+) -> Vec<Command> {
     let existing =
         state.command(input.cron_name.is_none().then_some(input.command.as_str()), input.cron_name.as_deref());
     let edit = required_edit(input, existing);
@@ -121,6 +131,7 @@ fn crontab_commands(input: &CrontabInput, state: &CrontabFile, temporary: &str) 
         bits.extend([raw(">"), quoted(temporary)]);
         commands.push(shell(bits));
     }
+    let sed_files = SedFiles { temporary, backup_extension };
     match edit {
         CrontabEdit::Add(line) => {
             if !state.is_empty() {
@@ -132,10 +143,10 @@ fn crontab_commands(input: &CrontabInput, state: &CrontabFile, temporary: &str) 
             commands.push(append_line(&line, temporary));
         }
         CrontabEdit::Remove(existing_command) => {
-            commands.push(sed_edit(input, temporary, &existing_command, None));
+            commands.push(sed_edit(input, &sed_files, &existing_command, None));
         }
         CrontabEdit::Replace { existing_command, line } => {
-            commands.push(sed_edit(input, temporary, &existing_command, Some(&line)));
+            commands.push(sed_edit(input, &sed_files, &existing_command, Some(&line)));
         }
     }
     let mut bits = vec![raw("crontab")];
@@ -211,23 +222,32 @@ fn field(value: Option<&CronField>) -> String {
     value.map_or_else(|| "*".to_owned(), CronField::display)
 }
 
-fn sed_edit(input: &CrontabInput, temporary: &str, existing: &str, replacement: Option<&str>) -> Command {
+struct SedFiles<'a> {
+    temporary: &'a str,
+    backup_extension: &'a str,
+}
+
+fn sed_edit(input: &CrontabInput, files: &SedFiles<'_>, existing: &str, replacement: Option<&str>) -> Command {
     let pattern = format!(".*{}.*", escape_basic_regex(existing));
     let script = replacement.map_or_else(
         || format!("/{}/d", escape_sed_delimiter(&pattern)),
         |replacement| format!("s/{}/{}/", escape_sed_delimiter(&pattern), escape_sed_replacement(replacement)),
     );
-    let script =
-        if input.interpolate_variables { raw(format!("\"{}\"", script.replace('"', "\\\""))) } else { quoted(&script) };
+    let script = if input.interpolate_variables {
+        let escaped = script.replace('\\', "\\\\").replace('$', "\\$").replace('`', "\\`").replace('"', "\\\"");
+        raw(format!("\"{escaped}\""))
+    } else {
+        quoted(&script)
+    };
     shell([
         raw("sed"),
-        raw("-i.rustinfra-crontab-backup"),
+        raw(format!("-i.{}", files.backup_extension)),
         script,
-        quoted(temporary),
+        quoted(files.temporary),
         raw("&&"),
         raw("rm"),
         raw("-f"),
-        quoted(&format!("{temporary}.rustinfra-crontab-backup")),
+        quoted(&format!("{}.{}", files.temporary, files.backup_extension)),
     ])
 }
 
@@ -273,57 +293,5 @@ fn shell(bits: impl IntoIterator<Item = CommandBit>) -> Command {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{CronField, CrontabInput, crontab_commands};
-    use crate::api::Command;
-    use crate::facts::crontab::{CrontabFile, CrontabItem};
-
-    fn descriptions(commands: &[Command]) -> Vec<String> {
-        commands
-            .iter()
-            .filter_map(|command| match command {
-                Command::Shell(command) => Some(command.raw_value()),
-                _ => None,
-            })
-            .collect()
-    }
-
-    #[test]
-    fn adds_named_user_cron_with_list_schedule_and_safe_quoting() {
-        let mut input = CrontabInput::new("/bin/run 'all'");
-        input.user = Some("app user".to_owned());
-        input.cron_name = Some("nightly".to_owned());
-        input.minute = Some(CronField::List(vec!["0".to_owned(), "30".to_owned()]));
-        let commands = descriptions(&crontab_commands(&input, &CrontabFile::default(), "/tmp/cron file"));
-
-        assert_eq!(
-            commands,
-            [
-                "echo '# pyinfra-name=nightly' >> '/tmp/cron file'",
-                "echo '0,30 * * * * /bin/run '\"'\"'all'\"'\"'' >> '/tmp/cron file'",
-                "crontab -u 'app user' '/tmp/cron file'"
-            ]
-        );
-    }
-
-    #[test]
-    fn unchanged_special_time_is_noop_and_changed_command_is_replaced() {
-        let state = CrontabFile {
-            items: vec![CrontabItem {
-                command: Some("/bin/old".to_owned()),
-                comments: vec!["# pyinfra-name=start".to_owned()],
-                special_time: Some("@reboot".to_owned()),
-                ..CrontabItem::default()
-            }],
-        };
-        let mut input = CrontabInput::new("/bin/old");
-        input.cron_name = Some("start".to_owned());
-        input.special_time = Some("@reboot".to_owned());
-        assert!(crontab_commands(&input, &state, "/tmp/cron").is_empty());
-
-        input.command = "/bin/new".to_owned();
-        let commands = descriptions(&crontab_commands(&input, &state, "/tmp/cron"));
-        assert_eq!(commands.len(), 3);
-        assert!(commands[1].contains("s/.*\\/bin\\/old.*/@reboot \\/bin\\/new/"));
-    }
-}
+#[path = "crontab_tests.rs"]
+mod tests;

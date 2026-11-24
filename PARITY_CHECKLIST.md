@@ -25,7 +25,7 @@ that is observable through pyinfra's built-in product is in scope.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
-- **Explicit fixture qualification:** 169/1700 reference fixtures (9.94%).
+- **Explicit fixture qualification:** 191/1700 reference fixtures (11.24%).
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
@@ -73,7 +73,9 @@ remaining fixture qualification and broader release gates stay explicit below.
   fixtures.
 - [x] `choco` — Chocolatey installation, package convergence and upgrades, both facts, and all
   reference fixtures.
-- [ ] **Partial** `crontab` — core operation exists; complete fixture qualification is outstanding.
+- [x] `crontab` — additions, named jobs, users, normal and special schedules, edits, removals,
+  wildcards, quoted commands, timestamped sed backups, and interpolated shell safety match all
+  reference fixtures.
 - [x] `dnf` — packages, keys, repositories, RPM files, updates, module streams, quoting, and
   fixture-backed convergence.
 - [x] `docker` — container, image, build, volume, network, plugin, registry authentication,
