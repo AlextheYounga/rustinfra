@@ -191,6 +191,10 @@ mod tests {
     #[test]
     fn linux_busybox_and_darwin_processes_preserve_arguments() {
         assert_eq!(
+            Processes.command(&ProcessesInput::default()).raw_value(),
+            "LANG=C ps -eo pid,user,stat,%cpu,%mem,comm,args --no-headers"
+        );
+        assert_eq!(
             Processes.command(&ProcessesInput { pid: Some(1), platform: ProcessPlatform::Linux }).raw_value(),
             "LANG=C ps -p 1 -o pid,user,stat,%cpu,%mem,comm,args"
         );
@@ -198,6 +202,19 @@ mod tests {
             .process(&["1 root Ss 0.0 0.1 init /sbin/init --system".to_owned()], &ProcessesInput::default())
             .unwrap();
         assert_eq!(linux[&1].args, "/sbin/init --system");
+        let bsd_input = ProcessesInput { pid: None, platform: ProcessPlatform::Bsd };
+        assert_eq!(Processes.command(&bsd_input).raw_value(), "LANG=C ps -eo pid,user,stat,%cpu,%mem,comm,args");
+        let bsd = Processes
+            .process(
+                &["PID USER STAT %CPU %MEM COMMAND COMMAND".to_owned(), "1 root Ss 0.0 0.1 init /sbin/init".to_owned()],
+                &bsd_input,
+            )
+            .unwrap();
+        assert_eq!(bsd[&1].command, "init");
+        assert_eq!(
+            Processes.command(&ProcessesInput { pid: Some(1), platform: ProcessPlatform::Bsd }).raw_value(),
+            "LANG=C ps -p 1 -o pid,user,stat,%cpu,%mem,comm,args"
+        );
         let busy = Processes
             .process(
                 &["1 root 2108 S /sbin/init".to_owned()],
@@ -205,6 +222,18 @@ mod tests {
             )
             .unwrap();
         assert_eq!(busy[&1].command, "init");
+        assert_eq!(
+            Processes.command(&ProcessesInput { pid: None, platform: ProcessPlatform::BusyBox }).raw_value(),
+            "LANG=C ps -o pid,user,vsz,stat,args"
+        );
+        assert_eq!(
+            Processes.command(&ProcessesInput { pid: Some(1), platform: ProcessPlatform::BusyBox }).raw_value(),
+            "LANG=C ps -o pid,user,vsz,stat,args | awk 'NR==1 || $1==1'"
+        );
+        assert_eq!(
+            Processes.command(&ProcessesInput { pid: None, platform: ProcessPlatform::Darwin }).raw_value(),
+            "LANG=C ps -eo pid,user,stat,%cpu,%mem,args -ww && echo ===PYINFRA-PROCESSES-COMM=== && LANG=C ps -eo pid,comm -ww"
+        );
         let darwin = Processes
             .process(
                 &["1 root Ss 0.0 0.1 /sbin/launchd".to_owned(), DARWIN_MARKER.to_owned(), "1 /sbin/launchd".to_owned()],
@@ -212,6 +241,18 @@ mod tests {
             )
             .unwrap();
         assert_eq!(darwin[&1].command, "/sbin/launchd");
+        let spaced = Processes
+            .process(
+                &[
+                    "3 root S 0.0 0.0 /Applications/My App --flag\r".to_owned(),
+                    format!("{DARWIN_MARKER}\r"),
+                    "3 /Applications/My App\r".to_owned(),
+                ],
+                &ProcessesInput { pid: Some(3), platform: ProcessPlatform::Darwin },
+            )
+            .unwrap();
+        assert_eq!(spaced[&3].command, "/Applications/My App");
+        assert_eq!(spaced[&3].args, "/Applications/My App --flag");
         let vanished = Processes
             .process(
                 &[

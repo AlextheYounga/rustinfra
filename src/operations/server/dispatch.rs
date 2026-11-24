@@ -1,6 +1,6 @@
 use crate::connectors::Connector;
 use crate::facts::files::{Directory, Link, PathInfo, PathInput};
-use crate::facts::server::{Os, Which};
+use crate::facts::server::{Os, Which, command_available};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::service::ServiceControl;
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
@@ -188,7 +188,7 @@ fn service_control(input: &ServiceInput) -> ServiceControl {
 }
 
 async fn which(facts: &FactExecutor<'_>, command: &str) -> Result<bool, Box<dyn Error + Send + Sync>> {
-    Ok(facts.get(&Which, &command.to_owned()).await?.is_some())
+    Ok(command_available(facts.get(&Which, &command.to_owned()).await?.as_deref()))
 }
 
 #[cfg(test)]

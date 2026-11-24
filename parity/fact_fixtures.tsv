@@ -313,94 +313,94 @@ selinux.SEPorts/multiple_single_ports.json	unqualified
 selinux.SEPorts/only_single_port.json	unqualified	
 selinux.SEPorts/port_range.json	unqualified	
 selinux.SEPorts/single_and_range.json	unqualified	
-server.Arch/arch.json	unqualified	
-server.AuthorizedKeys/custom_path.json	unqualified	
-server.AuthorizedKeys/default_path.json	unqualified	
-server.Command/command.json	unqualified	
-server.Date/date.json	unqualified	
-server.EtcHosts/etc_hosts.json	unqualified	
-server.Groups/groups.json	unqualified	
-server.HasGui/gui_absent.json	unqualified	
-server.HasGui/gui_present.json	unqualified	
-server.Home/home.json	unqualified	
-server.Home/root.json	unqualified	
-server.Home/some_user.json	unqualified	
-server.Hostname/hostname.json	unqualified	
-server.KernelModules/freebsd_modules.json	unqualified	
-server.KernelModules/linux_modules.json	unqualified	
-server.Last/last_alpine_empty.json	unqualified	
-server.Last/last_freebsd.json	unqualified	
-server.Last/last_full.json	unqualified	
-server.Lastb/lastb_full.json	unqualified	
-server.LinuxDistribution/archlinux.json	unqualified	
-server.LinuxDistribution/centos-6.json	unqualified	
-server.LinuxDistribution/centos-7.json	unqualified	
-server.LinuxDistribution/centos-8.json	unqualified	
-server.LinuxDistribution/centos-stream-9.json	unqualified	
-server.LinuxDistribution/fedora-40.json	unqualified	
-server.LinuxDistribution/no_match.json	unqualified	
-server.LinuxDistribution/redos-8-0.json	unqualified	
-server.LinuxDistribution/ubuntu.json	unqualified	
-server.LinuxGui/gnome_present.json	unqualified	
-server.LinuxName/ubuntu.json	unqualified	
-server.LoadAverage/proc_loadavg.json	unqualified	
-server.LoadAverage/uptime_freebsd.json	unqualified	
-server.LoadAverage/uptime_linux.json	unqualified	
-server.Locales	unqualified	
-server.LsbRelease/release.json	unqualified	
-server.Mounts/mounts.json	unqualified	
-server.Mounts/openbsd.json	unqualified	
-server.Os/os.json	unqualified	
-server.OsVersion/os_version.json	unqualified	
-server.Port/empty.json	unqualified	
-server.Port/netstat-tcp-empty.json	unqualified	
-server.Port/netstat-tcp-one-process.json	unqualified	
-server.Port/netstat-tcp-truncated-name.json	unqualified	
-server.Port/netstat-udp-one-process.json	unqualified	
-server.Port/one-process.json	unqualified	
-server.Port/sockstat-tcp-empty.json	unqualified	
-server.Port/sockstat-tcp-one-process.json	unqualified	
-server.Port/sockstat-udp-one-process.json	unqualified	
-server.Port/ss-tcp-no-process-info.json	unqualified	
-server.Port/ss-udp-empty.json	unqualified	
-server.Port/ss-udp-one-process.json	unqualified	
-server.Port/two-processes.json	unqualified	
-server.Ports/netstat-alpine.json	unqualified	
-server.Ports/sockstat-freebsd.json	unqualified	
-server.Ports/ss-arch.json	unqualified	
-server.Ports/ss-ubuntu.json	unqualified	
-server.Processes/bsd_all.json	unqualified	
-server.Processes/bsd_single_pid.json	unqualified	
-server.Processes/busybox_all.json	unqualified	
-server.Processes/busybox_single_pid.json	unqualified	
-server.Processes/darwin_all.json	unqualified	
-server.Processes/darwin_pty_crlf.json	unqualified	
-server.Processes/darwin_single_pid.json	unqualified	
-server.Processes/darwin_spaced_executable.json	unqualified	
-server.Processes/darwin_vanished_pid.json	unqualified	
-server.Processes/linux_all.json	unqualified	
-server.Processes/linux_single_pid.json	unqualified	
-server.RebootRequired/alpine_reboot_required.json	unqualified	
-server.RebootRequired/freebsd_reboot_required.json	unqualified	
-server.RebootRequired/linux_no_reboot.json	unqualified	
-server.RebootRequired/linux_reboot_required.json	unqualified	
-server.SecurityLimits/security_limits.json	unqualified	
-server.Selinux/no-output.json	unqualified	
-server.Selinux/selinux.json	unqualified	
-server.Sysctl/sysctl_linux.json	unqualified	
-server.Sysctl/sysctl_macos.json	unqualified	
-server.Sysctl/sysctl_port_range.json	unqualified	
-server.Timezone/timezone.json	unqualified	
-server.TmpDir/default_fallback.json	unqualified	
-server.TmpDir/temp_set.json	unqualified	
-server.TmpDir/tmp_set.json	unqualified	
-server.TmpDir/tmpdir_set.json	unqualified	
-server.Uptime/uptime_linux.json	unqualified	
-server.Uptime/uptime_macos.json	unqualified	
-server.Users/mixed.json	unqualified	
-server.Users/regex_usernames.json	unqualified	
-server.Which/quotes_injection.json	unqualified	
-server.Which/which.json	unqualified	
+server.Arch/arch.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.AuthorizedKeys/custom_path.json	qualified	src/facts/server/system_tests.rs::authorized_keys_and_hosts_quote_paths_and_parse_reference_shapes
+server.AuthorizedKeys/default_path.json	qualified	src/facts/server/system_tests.rs::authorized_keys_and_hosts_quote_paths_and_parse_reference_shapes
+server.Command/command.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.Date/date.json	qualified	src/facts/server/storage.rs::date_mounts_and_modules_match_reference_formats
+server.EtcHosts/etc_hosts.json	qualified	src/facts/server/system_tests.rs::authorized_keys_and_hosts_quote_paths_and_parse_reference_shapes
+server.Groups/groups.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.HasGui/gui_absent.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.HasGui/gui_present.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.Home/home.json	qualified	src/facts/server/tests.rs::home_preserves_safe_tilde_expansion_and_rejects_shell_input
+server.Home/root.json	qualified	src/facts/server/tests.rs::home_preserves_safe_tilde_expansion_and_rejects_shell_input
+server.Home/some_user.json	qualified	src/facts/server/tests.rs::home_preserves_safe_tilde_expansion_and_rejects_shell_input
+server.Hostname/hostname.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.KernelModules/freebsd_modules.json	qualified	src/facts/server/storage.rs::date_mounts_and_modules_match_reference_formats
+server.KernelModules/linux_modules.json	qualified	src/facts/server/storage.rs::date_mounts_and_modules_match_reference_formats
+server.Last/last_alpine_empty.json	qualified	src/facts/server/login_history.rs::parses_full_reboot_empty_host_and_footer_records
+server.Last/last_freebsd.json	qualified	src/facts/server/login_history.rs::parses_full_reboot_empty_host_and_footer_records
+server.Last/last_full.json	qualified	src/facts/server/login_history.rs::parses_full_reboot_empty_host_and_footer_records
+server.Lastb/lastb_full.json	qualified	src/facts/server/login_history.rs::parses_full_reboot_empty_host_and_footer_records
+server.LinuxDistribution/archlinux.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/centos-6.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/centos-7.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/centos-8.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/centos-stream-9.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/fedora-40.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/no_match.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/redos-8-0.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxDistribution/ubuntu.json	qualified	src/facts/server/linux_distribution.rs::parses_reference_distribution_variants_and_empty_output
+server.LinuxGui/gnome_present.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.LinuxName/ubuntu.json	qualified	src/facts/server/system_tests.rs::linux_name_matches_distribution_command_and_ubuntu_output
+server.LoadAverage/proc_loadavg.json	qualified	src/facts/server/tests.rs::load_average_parses_procfs_and_bsd_uptime_formats
+server.LoadAverage/uptime_freebsd.json	qualified	src/facts/server/tests.rs::load_average_parses_procfs_and_bsd_uptime_formats
+server.LoadAverage/uptime_linux.json	qualified	src/facts/server/tests.rs::load_average_parses_procfs_and_bsd_uptime_formats
+server.Locales	qualified	src/facts/server/tests.rs::locales_match_reference_fixture_normalization
+server.LsbRelease/release.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.Mounts/mounts.json	qualified	src/facts/server/storage.rs::date_mounts_and_modules_match_reference_formats
+server.Mounts/openbsd.json	qualified	src/facts/server/storage.rs::date_mounts_and_modules_match_reference_formats
+server.Os/os.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.OsVersion/os_version.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.Port/empty.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/netstat-tcp-empty.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/netstat-tcp-one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/netstat-tcp-truncated-name.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/netstat-udp-one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/sockstat-tcp-empty.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/sockstat-tcp-one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/sockstat-udp-one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/ss-tcp-no-process-info.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/ss-udp-empty.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/ss-udp-one-process.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Port/two-processes.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Ports/netstat-alpine.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Ports/sockstat-freebsd.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Ports/ss-arch.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Ports/ss-ubuntu.json	qualified	src/facts/server/ports.rs::port_commands_and_all_parsers_match_reference_formats
+server.Processes/bsd_all.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/bsd_single_pid.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/busybox_all.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/busybox_single_pid.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/darwin_all.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/darwin_pty_crlf.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/darwin_single_pid.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/darwin_spaced_executable.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/darwin_vanished_pid.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/linux_all.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.Processes/linux_single_pid.json	qualified	src/facts/server/processes.rs::linux_busybox_and_darwin_processes_preserve_arguments
+server.RebootRequired/alpine_reboot_required.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.RebootRequired/freebsd_reboot_required.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.RebootRequired/linux_no_reboot.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.RebootRequired/linux_reboot_required.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.SecurityLimits/security_limits.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.Selinux/no-output.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.Selinux/selinux.json	qualified	src/facts/server/system_tests.rs::release_gui_selinux_limits_and_reboot_match_fixtures
+server.Sysctl/sysctl_linux.json	qualified	src/facts/server/sysctl.rs::parses_linux_and_bsd_values_with_typed_numbers_and_lists
+server.Sysctl/sysctl_macos.json	qualified	src/facts/server/sysctl.rs::parses_linux_and_bsd_values_with_typed_numbers_and_lists
+server.Sysctl/sysctl_port_range.json	qualified	src/facts/server/sysctl.rs::parses_linux_and_bsd_values_with_typed_numbers_and_lists
+server.Timezone/timezone.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.TmpDir/default_fallback.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.TmpDir/temp_set.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.TmpDir/tmp_set.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.TmpDir/tmpdir_set.json	qualified	src/facts/server/tests.rs::simple_server_facts_match_reference_commands_and_outputs
+server.Uptime/uptime_linux.json	qualified	src/facts/server/system_tests.rs::uptime_commands_and_parsing_match_linux_and_bsd
+server.Uptime/uptime_macos.json	qualified	src/facts/server/system_tests.rs::uptime_commands_and_parsing_match_linux_and_bsd
+server.Users/mixed.json	qualified	src/facts/server/users.rs::parses_reference_user_shape_and_secondary_groups
+server.Users/regex_usernames.json	qualified	src/facts/server/users.rs::parses_reference_user_shape_and_secondary_groups
+server.Which/quotes_injection.json	qualified	src/facts/server/tests.rs::which_quotes_commands_and_returns_empty_output_for_missing_commands
+server.Which/which.json	qualified	src/facts/server/tests.rs::which_quotes_commands_and_returns_empty_output_for_missing_commands
 snap.SnapPackage/lxd.json	unqualified	
 snap.SnapPackage/not_found.json	unqualified	
 snap.SnapPackage/snapd.json	unqualified	

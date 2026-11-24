@@ -3,7 +3,7 @@ use crate::connectors::Connector;
 use crate::facts::files::{File, PathInfo, PathInput};
 use crate::facts::packages::PackageMap;
 use crate::facts::pkg::PkgPackages;
-use crate::facts::server::{Arch, Os, OsVersion, Which};
+use crate::facts::server::{Arch, Os, OsVersion, Which, command_available};
 use crate::facts::{FactExecutor, FactOptions};
 
 use super::packages::{PackageCommands, PackagePolicy, converge_packages};
@@ -48,7 +48,7 @@ impl StatefulOperation for Packages {
         Box::pin(async move {
             let facts = FactExecutor::new(connector, fact_options);
             let installed = facts.get(&PkgPackages, &()).await?;
-            let is_pkg = facts.get(&Which, &"pkg".to_owned()).await?.is_some();
+            let is_pkg = command_available(facts.get(&Which, &"pkg".to_owned()).await?.as_deref());
             let mut pkg_path = input.pkg_path.clone();
             if input.present && pkg_path.is_none() {
                 let install_url = facts.get(&File, &PathInput::from("/etc/installurl")).await?;

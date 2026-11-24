@@ -7,7 +7,7 @@ use crate::connectors::Connector;
 use crate::facts::selinux::{
     FileContext, FileContextInfo, FileContextMapping, SEBoolean, SEPort, SEPortInput, SEPorts,
 };
-use crate::facts::server::Which;
+use crate::facts::server::{Which, command_available};
 use crate::facts::{FactExecutor, FactOptions};
 
 use super::{StatefulOperation, StatefulOperationFuture};
@@ -209,7 +209,7 @@ impl StatefulOperation for Port {
                 return Err(Box::new(SelinuxOperationError::MissingType) as Box<dyn StdError + Send + Sync>);
             }
             let executor = FactExecutor::new(connector, options);
-            let direct = executor.get(&Which, &"sepolicy".to_owned()).await?.is_some();
+            let direct = command_available(executor.get(&Which, &"sepolicy".to_owned()).await?.as_deref());
             let current = if direct {
                 executor
                     .get(&SEPort, &SEPortInput { protocol: input.protocol.clone(), port: input.port.to_string() })

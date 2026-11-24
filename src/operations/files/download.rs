@@ -6,7 +6,7 @@ use chrono::{Duration, Utc};
 use crate::api::{Command, CommandBit, StringCommand, remote_temporary_filename};
 use crate::connectors::Connector;
 use crate::facts::files::{File, Md5File, PathInfo, PathInput, Sha1File, Sha256File, Sha384File};
-use crate::facts::server::{Date, Which};
+use crate::facts::server::{Date, Which, command_available};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
@@ -96,8 +96,9 @@ impl StatefulOperation for Download {
             if !fetch {
                 return Ok(metadata_commands(input, &info));
             }
-            let curl = facts.get(&Which, &"curl".to_owned()).await?.is_some();
-            let wget = if curl { false } else { facts.get(&Which, &"wget".to_owned()).await?.is_some() };
+            let curl = command_available(facts.get(&Which, &"curl".to_owned()).await?.as_deref());
+            let wget =
+                if curl { false } else { command_available(facts.get(&Which, &"wget".to_owned()).await?.as_deref()) };
             Ok(download_commands(input, &options.run.remote_temp_directory, curl, wget))
         })
     }

@@ -186,6 +186,49 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(process, PortProcess { process: "named".to_owned(), pid: 1234 });
+        let ss_tcp = PortInput { port: 80, protocol: NetworkProtocol::Tcp, tool: NetworkTool::Ss };
+        assert_eq!(Port.process(&["LISTEN 0 128 *:80 *:*".to_owned()], &ss_tcp).unwrap(), None);
+        assert_eq!(Port.process(&[], &ss_tcp).unwrap(), None);
+        let netstat_tcp = PortInput { port: 80, protocol: NetworkProtocol::Tcp, tool: NetworkTool::Netstat };
+        assert_eq!(
+            Port.process(&["tcp 0 0 0.0.0.0:80 0.0.0.0:* LISTEN 5678/nginx".to_owned()], &netstat_tcp).unwrap(),
+            Some(PortProcess { process: "nginx".to_owned(), pid: 5678 })
+        );
+        assert_eq!(
+            Port.process(&["tcp 0 0 0.0.0.0:22 0.0.0.0:* LISTEN 2316/sshd [listener".to_owned()], &netstat_tcp,)
+                .unwrap(),
+            Some(PortProcess { process: "sshd".to_owned(), pid: 2316 })
+        );
+        let netstat_udp = PortInput { port: 53, protocol: NetworkProtocol::Udp, tool: NetworkTool::Netstat };
+        assert_eq!(
+            Port.process(&["udp 0 0 0.0.0.0:53 0.0.0.0:* 1234/named".to_owned()], &netstat_udp).unwrap(),
+            Some(PortProcess { process: "named".to_owned(), pid: 1234 })
+        );
+        assert_eq!(Port.process(&["tcp 0 0 0.0.0.0:80 0.0.0.0:* LISTEN -".to_owned()], &netstat_tcp).unwrap(), None);
+        let sockstat_tcp = PortInput { port: 22, protocol: NetworkProtocol::Tcp, tool: NetworkTool::Sockstat };
+        assert_eq!(
+            Port.process(
+                &[
+                    "USER COMMAND PID FD PROTO LOCAL ADDRESS FOREIGN ADDRESS".to_owned(),
+                    "root sshd 6674 6 tcp6 *:22 *:*".to_owned()
+                ],
+                &sockstat_tcp,
+            )
+            .unwrap(),
+            Some(PortProcess { process: "sshd".to_owned(), pid: 6674 })
+        );
+        assert_eq!(Port.process(&[], &sockstat_tcp).unwrap(), None);
+        let two_processes = Port
+            .process(
+                &[
+                    r#"LISTEN 0 511 0.0.0.0:443 0.0.0.0:* users:(("nginx",pid=3759498,fd=3),("nginx",pid=2274336,fd=3))"#
+                        .to_owned(),
+                    r#"LISTEN 0 511 [::]:443 [::]:* users:(("nginx",pid=3759498,fd=4))"#.to_owned(),
+                ],
+                &PortInput { port: 443, protocol: NetworkProtocol::Tcp, tool: NetworkTool::Ss },
+            )
+            .unwrap();
+        assert_eq!(two_processes, Some(PortProcess { process: "nginx".to_owned(), pid: 3_759_498 }));
         let ports = Ports
             .process(
                 &[r#"udp UNCONN 0 0 127.0.0.53%lo:53 0.0.0.0:* users:(("resolve",pid=1,fd=2))"#.to_owned()],

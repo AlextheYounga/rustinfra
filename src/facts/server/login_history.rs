@@ -96,5 +96,7 @@ mod tests {
         assert_eq!(records.len(), 3);
         assert_eq!(Last.requires_command(&()), Some("last"));
         assert_eq!(Lastb.requires_command(&()), Some("lastb"));
+        assert!(Last.process(&[], &()).unwrap().is_empty());
+        assert_eq!(Lastb.process(&output, &()).unwrap(), records);
     }
 }

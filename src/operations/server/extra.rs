@@ -8,7 +8,7 @@ use crate::connectors::Connector;
 use crate::facts::files::{FileContents, PathInput};
 use crate::facts::server::{
     ETC_HOSTS_PATH, EtcHosts as EtcHostsFact, Kernel, KernelModules, Mounts, ServerKernel, Timezone as TimezoneFact,
-    Which, is_bsd,
+    Which, command_available, is_bsd,
 };
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::files::{Put, PutInput, Template, TemplateInput};
@@ -337,7 +337,7 @@ impl StatefulOperation for Timezone {
             if facts.get(&TimezoneFact, &()).await?.as_ref() == Some(input) {
                 return Ok(Vec::new());
             }
-            if facts.get(&Which, &"timedatectl".to_owned()).await?.is_some() {
+            if command_available(facts.get(&Which, &"timedatectl".to_owned()).await?.as_deref()) {
                 Ok(vec![shell([raw("timedatectl"), raw("set-timezone"), quoted(input)])])
             } else {
                 Ok(vec![

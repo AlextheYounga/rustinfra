@@ -1,7 +1,7 @@
 use crate::api::{Command, CommandBit, StringCommand};
 use crate::connectors::Connector;
 use crate::facts::files::{FileContents, PathInput};
-use crate::facts::server::{Groups, Hostname as HostnameFact, Os, Which, is_bsd};
+use crate::facts::server::{Groups, Hostname as HostnameFact, Os, Which, command_available, is_bsd};
 use crate::facts::{FactExecutor, FactOptions};
 use crate::operations::{StatefulOperation, StatefulOperationFuture};
 
@@ -50,7 +50,7 @@ impl StatefulOperation for Hostname {
             let facts = FactExecutor::new(connector, fact_options);
             let current = facts.get(&HostnameFact, &()).await?;
             let hostnamectl = facts.get(&Which, &"hostnamectl".to_owned()).await?;
-            if hostnamectl.is_some() {
+            if command_available(hostnamectl.as_deref()) {
                 return Ok(if current.as_deref() == Some(input.hostname.as_str()) {
                     Vec::new()
                 } else {

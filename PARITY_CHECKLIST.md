@@ -25,7 +25,7 @@ that is observable through pyinfra's built-in product is in scope.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
-- **Explicit fixture qualification:** 191/1700 reference fixtures (11.24%).
+- **Explicit fixture qualification:** 279/1700 reference fixtures (16.41%).
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
@@ -199,7 +199,8 @@ remaining fixture qualification and broader release gates stay explicit below.
 - [x] `rpm`
 - [x] `runit`
 - [x] `selinux`
-- [x] `server`
+- [x] `server` — all 88 reference fixtures are linked to focused command and parser tests, including
+  Linux/BSD variants, empty output, shell quoting, and deprecated fact aliases.
 - [x] `snap`
 - [x] `supervisorctl`
 - [x] `systemd`

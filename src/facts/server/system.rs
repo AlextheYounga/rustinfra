@@ -322,52 +322,5 @@ impl Fact for RebootRequired {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn uptime_commands_and_parsing_match_linux_and_bsd() {
-        let linux = KernelInput { kernel: "Linux".to_owned() };
-        assert_eq!(Uptime.command(&linux).raw_value(), "cut -d. -f1 /proc/uptime");
-        assert_eq!(Uptime.process(&["86400".to_owned()], &linux).unwrap(), 86_400);
-        let darwin = KernelInput { kernel: "Darwin".to_owned() };
-        assert_eq!(Uptime.process(&["1746748800".to_owned(), "1746662400".to_owned()], &darwin).unwrap(), 86_400);
-    }
-
-    #[test]
-    fn authorized_keys_and_hosts_quote_paths_and_parse_reference_shapes() {
-        let input = AuthorizedKeysInput { user: HomeInput::try_from("alice").unwrap(), path: None };
-        assert_eq!(AuthorizedKeys.command(&input).raw_value(), "cat ~alice/.ssh/authorized_keys 2>/dev/null || true");
-        assert_eq!(
-            AuthorizedKeys.process(&["# comment".to_owned(), " ssh-ed25519 key user ".to_owned()], &input).unwrap(),
-            ["ssh-ed25519 key user"]
-        );
-        let path = Some("/tmp/host file".to_owned());
-        assert_eq!(EtcHosts.command(&path).raw_value(), "cat '/tmp/host file' 2>/dev/null || true");
-        let hosts = EtcHosts
-            .process(&["127.0.0.1 localhost localhost".to_owned(), "127.0.0.1 local # note".to_owned()], &None)
-            .unwrap();
-        assert_eq!(hosts["127.0.0.1"], ["localhost", "local"]);
-    }
-
-    #[test]
-    fn release_gui_selinux_limits_and_reboot_match_fixtures() {
-        let release = LsbRelease
-            .process(&["Distributor ID: Ubuntu".to_owned(), "Description: Ubuntu LTS".to_owned()], &())
-            .unwrap();
-        assert_eq!(release["id"], "Ubuntu");
-        assert_eq!(
-            LinuxName.process(&["/etc/os-release".to_owned(), "NAME=\"Ubuntu\"".to_owned()], &()).unwrap().as_deref(),
-            Some("Ubuntu")
-        );
-        assert_eq!(LinuxGui.process(&["/usr/bin/gnome-session".to_owned()], &()).unwrap(), ["GNOME"]);
-        assert!(HasGui.process(&["/usr/bin/gnome-session".to_owned()], &()).unwrap());
-        assert_eq!(
-            Selinux.process(&["SELinux status: enabled".to_owned()], &()).unwrap().mode.as_deref(),
-            Some("enabled")
-        );
-        let limits = SecurityLimits.process(&["# comment".to_owned(), "* soft nofile 104857".to_owned()], &()).unwrap();
-        assert_eq!(limits[0].item, "nofile");
-        assert!(RebootRequired.process(&["reboot_required".to_owned()], &()).unwrap());
-    }
-}
+#[path = "system_tests.rs"]
+mod tests;

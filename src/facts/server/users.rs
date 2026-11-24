@@ -107,5 +107,17 @@ mod tests {
         assert_eq!(users["root"].lastlog.as_deref(), Some("Jun 5 12:03:23 -0600 2021"));
         assert_eq!(users["noshell"].shell, None);
         assert_eq!(users["noshell"].password, "");
+
+        let regex_names = Users
+            .process(
+                &[
+                    "foo:x:1000:1000:Foo:/home/foo:/bin/sh|foo|foo||foo-password".to_owned(),
+                    "f.o:x:1001:1001:F O:/home/f.o:/bin/sh|f.o|f.o||dot-password".to_owned(),
+                ],
+                &(),
+            )
+            .unwrap();
+        assert_eq!(regex_names["foo"].password, "foo-password");
+        assert_eq!(regex_names["f.o"].home.as_deref(), Some("/home/f.o"));
     }
 }

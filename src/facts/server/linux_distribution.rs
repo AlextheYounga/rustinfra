@@ -170,4 +170,110 @@ mod tests {
         assert_eq!(info.major, Some(8));
         assert_eq!(info.minor, Some(4));
     }
+
+    #[test]
+    fn parses_reference_distribution_variants_and_empty_output() {
+        let cases = [
+            (vec!["/etc/os-release", "NAME=\"Arch Linux\"", "ID=arch", "---"], Some("Arch Linux"), None, None),
+            (
+                vec![
+                    "/etc/centos-release",
+                    "CentOS release 6.9 (Final)",
+                    "---",
+                    "/etc/os-release",
+                    "LSB_VERSION=base-4.0-amd64",
+                    "---",
+                ],
+                Some("CentOS"),
+                Some(6),
+                Some(9),
+            ),
+            (
+                vec![
+                    "/etc/centos-release",
+                    "CentOS Linux release 7.9.2009 (Core)",
+                    "---",
+                    "/etc/os-release",
+                    "ID=centos",
+                    "VERSION_ID=7",
+                    "---",
+                ],
+                Some("CentOS"),
+                Some(7),
+                Some(9),
+            ),
+            (
+                vec![
+                    "/etc/centos-release",
+                    "CentOS Linux release 8.4.2105",
+                    "---",
+                    "/etc/os-release",
+                    "ID=centos",
+                    "VERSION_ID=8",
+                    "---",
+                ],
+                Some("CentOS"),
+                Some(8),
+                Some(4),
+            ),
+            (
+                vec![
+                    "/etc/centos-release",
+                    "CentOS Stream release 9",
+                    "---",
+                    "/etc/os-release",
+                    "ID=centos",
+                    "VERSION_ID=9",
+                    "---",
+                ],
+                Some("CentOS"),
+                Some(9),
+                None,
+            ),
+            (
+                vec![
+                    "/etc/fedora-release",
+                    "Fedora release 40 (Forty)",
+                    "---",
+                    "/etc/os-release",
+                    "ID=fedora",
+                    "VERSION_ID=40",
+                    "VERSION=\"40 (Forty)\"",
+                    "---",
+                ],
+                Some("Fedora"),
+                Some(40),
+                None,
+            ),
+            (
+                vec!["/etc/os-release", "NAME=\"RED OS\"", "ID=redos", "VERSION_ID=8.0", "---"],
+                Some("RED OS"),
+                Some(8),
+                Some(0),
+            ),
+            (
+                vec![
+                    "/etc/os-release",
+                    "NAME=Ubuntu",
+                    "ID=ubuntu",
+                    "VERSION=\"20.04 LTS (Focal Fossa)\"",
+                    "VERSION_ID=20.04",
+                    "---",
+                ],
+                Some("Ubuntu"),
+                Some(20),
+                Some(4),
+            ),
+        ];
+
+        for (output, name, major, minor) in cases {
+            let output = output.into_iter().map(str::to_owned).collect::<Vec<_>>();
+            let info = LinuxDistribution.process(&output, &()).unwrap();
+            assert_eq!(info.name.as_deref(), name);
+            assert_eq!(info.major, major);
+            assert_eq!(info.minor, minor);
+        }
+
+        assert_eq!(LinuxDistribution.process(&[], &()).unwrap(), Default::default());
+    }
 }

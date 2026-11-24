@@ -278,9 +278,13 @@ impl Fact for Command {
     }
 }
 
-/// Returns the path to a command, or `None` when it is unavailable.
+/// Returns the path to a command, or an empty string when it is unavailable.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Which;
+
+pub(crate) fn command_available(path: Option<&str>) -> bool {
+    path.is_some_and(|path| !path.is_empty())
+}
 
 impl Fact for Which {
     type Input = String;
@@ -303,7 +307,7 @@ impl Fact for Which {
     }
 
     fn process(&self, output: &[String], _input: &Self::Input) -> Result<Self::Output, Box<dyn Error + Send + Sync>> {
-        Ok(output.first().cloned())
+        Ok(Some(output.first().cloned().unwrap_or_default()))
     }
 }
 
@@ -338,47 +342,5 @@ impl Fact for Locales {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        Fact, Home, HomeInput, Hostname, LoadAverage, LoadAverages, Locales, MacosVersion, TmpDir, UnsafeHomeUser,
-    };
-
-    #[test]
-    fn locales_match_reference_fixture_normalization() {
-        let output = ["C", "C.UTF-8", "en_US.utf8", "fr_FR.utf8", "POSIX"].map(str::to_owned);
-
-        let locales = Locales.process(&output, &()).unwrap();
-
-        assert_eq!(locales, ["C", "C.UTF-8", "en_US.UTF-8", "fr_FR.UTF-8", "POSIX"]);
-    }
-
-    #[test]
-    fn simple_server_facts_match_reference_commands_and_first_line_results() {
-        assert_eq!(Hostname.command(&()).raw_value(), "uname -n");
-        assert_eq!(Hostname.process(&["my-host.net".to_owned()], &()).unwrap().as_deref(), Some("my-host.net"));
-        assert_eq!(TmpDir.command(&()).raw_value(), super::TEMP_DIRECTORY_COMMAND);
-        assert_eq!(MacosVersion.requires_command(&()), Some("sw_vers"));
-    }
-
-    #[test]
-    fn home_preserves_safe_tilde_expansion_and_rejects_shell_input() {
-        let current = HomeInput::default();
-        let user = HomeInput::try_from("some_user").unwrap();
-
-        assert_eq!(Home.command(&current).raw_value(), "echo ~");
-        assert_eq!(Home.command(&user).raw_value(), "echo ~some_user");
-        assert_eq!(HomeInput::try_from("root; id"), Err(UnsafeHomeUser("root; id".to_owned())));
-    }
-
-    #[test]
-    fn load_average_parses_procfs_and_bsd_uptime_formats() {
-        let procfs = LoadAverage.process(&["0.12 0.21 0.22 1/145 71536".to_owned()], &()).unwrap();
-        let freebsd = LoadAverage
-            .process(&["12:03PM up 16 days, 2 users, load averages: 0.12, 0.21, 0.22".to_owned()], &())
-            .unwrap();
-        let expected = Some(LoadAverages { one_minute: 0.12, five_minutes: 0.21, fifteen_minutes: 0.22 });
-
-        assert_eq!(procfs, expected);
-        assert_eq!(freebsd, expected);
-    }
-}
+#[path = "server/tests.rs"]
+mod tests;
