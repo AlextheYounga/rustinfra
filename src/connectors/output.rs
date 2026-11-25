@@ -12,15 +12,54 @@ pub struct OutputLine {
     pub line: String,
 }
 
+/// Receives command output as each complete line is observed by a connector.
+#[derive(Clone)]
+pub struct OutputHandler(Arc<dyn Fn(&OutputLine) + Send + Sync>);
+
+impl OutputHandler {
+    #[must_use]
+    pub fn new(handler: impl Fn(&OutputLine) + Send + Sync + 'static) -> Self {
+        Self(Arc::new(handler))
+    }
+
+    fn handle(&self, line: &OutputLine) {
+        (self.0)(line);
+    }
+}
+
+impl fmt::Debug for OutputHandler {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("OutputHandler(..)")
+    }
+}
+
+impl PartialEq for OutputHandler {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for OutputHandler {}
+
 /// Interleaved stdout and stderr from a command.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CommandOutput {
     combined_lines: Vec<OutputLine>,
+    handler: Option<OutputHandler>,
 }
 
 impl CommandOutput {
+    #[must_use]
+    pub(crate) fn with_handler(handler: Option<OutputHandler>) -> Self {
+        Self { combined_lines: Vec::new(), handler }
+    }
+
     pub(crate) fn push(&mut self, stream: OutputStream, line: String) {
-        self.combined_lines.push(OutputLine { stream, line });
+        let line = OutputLine { stream, line };
+        if let Some(handler) = &self.handler {
+            handler.handle(&line);
+        }
+        self.combined_lines.push(line);
     }
 
     pub(crate) fn extend(&mut self, output: Self) {
@@ -71,3 +110,5 @@ impl CommandOutput {
 fn join_lines<'a>(lines: impl IntoIterator<Item = &'a str>) -> String {
     lines.into_iter().collect::<Vec<_>>().join("\n")
 }
+use std::fmt;
+use std::sync::Arc;

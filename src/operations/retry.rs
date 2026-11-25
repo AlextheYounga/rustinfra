@@ -6,7 +6,8 @@ use std::time::Duration;
 use tokio::time;
 
 use crate::api::Command;
-use crate::connectors::{CommandOutput, Connector, RunOptions};
+use crate::connectors::{CommandOutput, Connector, OutputHandler, RunOptions};
+use crate::facts::Phase;
 
 use super::command_executor::AttemptOptions;
 use super::{CommandExecutionError, CommandExecutor};
@@ -60,7 +61,7 @@ pub struct OperationExecution {
 
 type CommandGenerationFuture<'a> =
     Pin<Box<dyn Future<Output = Result<Vec<Command>, CommandExecutionError>> + Send + 'a>>;
-type CommandGenerator = dyn for<'a> Fn(&'a dyn Connector) -> CommandGenerationFuture<'a> + Send + Sync;
+type CommandGenerator = dyn for<'a> Fn(&'a dyn Connector, Phase) -> CommandGenerationFuture<'a> + Send + Sync;
 
 impl OperationExecution {
     #[must_use]
@@ -73,7 +74,7 @@ impl OperationExecution {
         Self::new_async(
             host,
             operation,
-            move |_| {
+            move |_, _| {
                 let commands = generate_commands();
                 Box::pin(async move { Ok(commands) })
             },
@@ -85,10 +86,18 @@ impl OperationExecution {
     pub fn new_async(
         host: impl Into<String>,
         operation: impl Into<String>,
-        generate_commands: impl for<'a> Fn(&'a dyn Connector) -> CommandGenerationFuture<'a> + Send + Sync + 'static,
+        generate_commands: impl for<'a> Fn(&'a dyn Connector, Phase) -> CommandGenerationFuture<'a> + Send + Sync + 'static,
         options: OperationExecutionOptions,
     ) -> Self {
         Self { host: host.into(), operation: operation.into(), generate_commands: Arc::new(generate_commands), options }
+    }
+
+    pub(crate) async fn commands(
+        &self,
+        connector: &dyn Connector,
+        phase: Phase,
+    ) -> Result<Vec<Command>, CommandExecutionError> {
+        (self.generate_commands)(connector, phase).await
     }
 }
 
@@ -125,10 +134,19 @@ pub struct OperationExecutor;
 
 impl OperationExecutor {
     pub async fn execute(&self, connector: &dyn Connector, execution: &OperationExecution) -> OperationExecutionResult {
+        self.execute_with_output_handler(connector, execution, None).await
+    }
+
+    pub(crate) async fn execute_with_output_handler(
+        &self,
+        connector: &dyn Connector,
+        execution: &OperationExecution,
+        output_handler: Option<OutputHandler>,
+    ) -> OperationExecutionResult {
         let mut retry_attempts = 0;
 
         loop {
-            let commands = match (execution.generate_commands)(connector).await {
+            let commands = match execution.commands(connector, Phase::Execute).await {
                 Ok(commands) => commands,
                 Err(error) => {
                     return OperationExecutionResult {
@@ -145,14 +163,13 @@ impl OperationExecutor {
                     };
                 }
             };
+            let mut run_options = execution.options.run.clone();
+            run_options.output_handler = output_handler.clone();
             let attempt = CommandExecutor
                 .execute_attempt(
                     connector,
                     &commands,
-                    AttemptOptions {
-                        run: &execution.options.run,
-                        continue_on_error: execution.options.continue_on_error,
-                    },
+                    AttemptOptions { run: &run_options, continue_on_error: execution.options.continue_on_error },
                 )
                 .await;
             let should_retry =

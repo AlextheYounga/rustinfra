@@ -12,7 +12,7 @@ use tokio::{fs, task};
 
 use crate::api::{CommandBit, DEFAULT_TEMP_DIRECTORY, RsyncCommand, StringCommand};
 
-use super::{CommandOutput, OutputStream, UnixCommandOptions, make_unix_command};
+use super::{CommandOutput, OutputHandler, OutputStream, UnixCommandOptions, make_unix_command};
 
 /// Per-command controls handled by a connector rather than shell generation.
 #[derive(Clone, Debug, PartialEq)]
@@ -23,6 +23,8 @@ pub struct RunOptions {
     pub stdin: Vec<String>,
     pub get_pty: bool,
     pub remote_temp_directory: String,
+    /// Optional line callback used by deploy reporters for live command output.
+    pub output_handler: Option<OutputHandler>,
 }
 
 impl Default for RunOptions {
@@ -34,6 +36,7 @@ impl Default for RunOptions {
             stdin: Vec::new(),
             get_pty: false,
             remote_temp_directory: DEFAULT_TEMP_DIRECTORY.to_owned(),
+            output_handler: None,
         }
     }
 }
@@ -73,7 +76,7 @@ impl LocalConnector {
         options: &RunOptions,
     ) -> Result<CommandResult, LocalConnectorError> {
         let unix_command = make_unix_command(command, &options.unix);
-        let process = run_process(unix_command.raw_value(), &options.stdin);
+        let process = run_process(unix_command.raw_value(), &options.stdin, options.output_handler.clone());
         let (exit_code, output) = match options.timeout {
             Some(timeout) => {
                 time::timeout(timeout, process).await.map_err(|_| LocalConnectorError::Timeout(timeout))??
@@ -137,6 +140,7 @@ impl LocalConnector {
 async fn run_process(
     command: String,
     stdin_lines: &[String],
+    output_handler: Option<OutputHandler>,
 ) -> Result<(Option<i32>, CommandOutput), LocalConnectorError> {
     let mut child = Command::new("sh")
         .arg("-c")
@@ -152,7 +156,7 @@ async fn run_process(
 
     let stdout = child.stdout.take().ok_or(LocalConnectorError::MissingPipe("stdout"))?;
     let stderr = child.stderr.take().ok_or(LocalConnectorError::MissingPipe("stderr"))?;
-    let result = read_process_output(&mut child, stdout, stderr).await;
+    let result = read_process_output(&mut child, stdout, stderr, output_handler).await;
     input_task.await??;
     result
 }
@@ -172,12 +176,13 @@ async fn read_process_output(
     child: &mut Child,
     stdout: ChildStdout,
     stderr: ChildStderr,
+    output_handler: Option<OutputHandler>,
 ) -> Result<(Option<i32>, CommandOutput), LocalConnectorError> {
     let mut stdout = BufReader::new(stdout).lines();
     let mut stderr = BufReader::new(stderr).lines();
     let mut stdout_open = true;
     let mut stderr_open = true;
-    let mut output = CommandOutput::default();
+    let mut output = CommandOutput::with_handler(output_handler);
 
     while stdout_open || stderr_open {
         tokio::select! {

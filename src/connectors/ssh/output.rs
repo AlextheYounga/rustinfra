@@ -1,7 +1,6 @@
-use crate::connectors::{CommandOutput, OutputStream};
+use crate::connectors::{CommandOutput, OutputHandler, OutputStream};
 
 /// Reassembles arbitrarily chunked SSH channel data into output lines.
-#[derive(Default)]
 pub(super) struct OutputCollector {
     output: CommandOutput,
     stdout: Vec<u8>,
@@ -9,6 +8,10 @@ pub(super) struct OutputCollector {
 }
 
 impl OutputCollector {
+    pub(super) fn new(handler: Option<OutputHandler>) -> Self {
+        Self { output: CommandOutput::with_handler(handler), stdout: Vec::new(), stderr: Vec::new() }
+    }
+
     pub(super) fn push(&mut self, stream: OutputStream, bytes: &[u8]) {
         let pending = match stream {
             OutputStream::Stdout => &mut self.stdout,
@@ -43,7 +46,7 @@ mod tests {
 
     #[test]
     fn output_chunks_are_split_into_lines_without_losing_stream_identity() {
-        let mut collector = OutputCollector::default();
+        let mut collector = OutputCollector::new(None);
         collector.push(OutputStream::Stdout, b"first\nsec");
         collector.push(OutputStream::Stderr, b"warning\r\n");
         collector.push(OutputStream::Stdout, b"ond");

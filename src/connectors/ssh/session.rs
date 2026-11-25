@@ -239,7 +239,7 @@ async fn execute_channel(
     }
     channel.eof().await?;
 
-    let mut collector = OutputCollector::default();
+    let mut collector = OutputCollector::new(options.output_handler.clone());
     let mut exit_code = None;
     while let Some(message) = channel.wait().await {
         match message {
