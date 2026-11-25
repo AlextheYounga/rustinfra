@@ -8,6 +8,24 @@ The translation is deliberate: pyinfra remains the behavioral reference, not a r
 We preserve the workflows and semantics that operators rely on, then use Rust to make them clear,
 composable, and safe to run concurrently.
 
+## Getting started
+
+Use a current stable Rust toolchain and a POSIX shell. For remote deployments, you'll also need
+SSH access to your hosts.
+
+```sh
+git clone https://github.com/AlextheYounga/rustinfra.git
+cd rustinfra
+cargo run --example local_deploy
+```
+
+This example runs `echo hello from rustinfra` on your machine. No Python runtime, remote agent, or
+local pyinfra checkout is required. Shell operations run their commands each time; use desired-state
+operations for idempotent convergence.
+
+Rustinfra is currently a **library used by compiled Rust deploys**, not a finished standalone CLI.
+`cargo run` alone does not execute a deploy; use the example or your own Rust application.
+
 ## A deploy is Rust
 
 Inventory, operations, and execution are ordinary Rust code:
@@ -44,11 +62,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-Run it:
+The code above is the workflow in [`examples/local_deploy.rs`](examples/local_deploy.rs). To use
+rustinfra in your own application, add it and a Tokio runtime:
 
 ```sh
-cargo run --example local_deploy
+cargo add rustinfra
+cargo add tokio --features macros,rt-multi-thread
 ```
+
+Replace `HostSpec::local()` with `HostSpec::ssh("web-01")` for an SSH target; the name can be an
+OpenSSH host alias. Local and SSH targets are supported.
+
+### Desired-state operations
+
+For a file that should exist, use a stateful operation inside the preparation closure:
+
+```rust
+host.add_stateful(
+    rustinfra::operations::files::File,
+    rustinfra::operations::files::FileInput::new("/tmp/rustinfra-example"),
+    rustinfra::operations::OperationOptions::default(),
+)?;
+```
+
+Unlike the shell example, this changes the target filesystem. The operation reads current state
+and produces no commands when the requested state is already satisfied.
+
+## Plan, apply, and report
 
 Before applying operations, rustinfra reads each host's current state and displays the proposed
 changes. Interactive terminals get a Docker Compose-inspired display with animated connect, plan,
@@ -57,16 +97,68 @@ each host operation reports `Success`, `No changes`, or `Failed`. Redirected out
 stable plain-text format. Deploys that need another presentation can provide a `DeployReporter`;
 `NullReporter` disables output.
 
-## Where it stands
+Interactive output keeps text left-aligned and places phase spinners and result symbols in a shared
+right-side column:
 
-rustinfra has reached the **85% product-capability milestone**. That means the core deployment
-workflows are runnable; it does **not** mean 85% of pyinfra’s operation and fact catalog has been
-ported. The remaining work is real, and the parity document says what it is.
+```text
+Connected 1/1                                                  ✓
+Planned 1/1                                                    ✓
+ server.shell             change: @local                       ✔
+Applying 0/1 server.shell on @local                            ⠹
+ @local       server.shell             | hello from rustinfra
+ @local       server.shell             Success                 ✔
+Applied 1/1                                                    ✓
+Disconnected 1/1                                               ✓
+Deployment complete
+```
 
-Today, rustinfra covers the deploy runtime and SSH foundation, filesystem convergence, Debian and
-RPM and language packages, systemd, users, templates, line editing, sysctl, Git, archive extraction,
-cron, pip environments, APT sources, iptables, locales, and security limits.
+- `✓` marks a finished phase; host results use `✔` for success, `─` for no change, `✘` for failure,
+  and `!` for an ignored failure.
+- Default reporting goes to **stderr**. Redirect with `2>deploy.log` or capture both streams with
+  `>deploy.log 2>&1`.
+- Redirected output and `TERM=dumb` use plain text.
+- Operations read current state again when applied, so earlier changes inform later decisions.
 
-For the milestone definitions, read [PARITY.md](PARITY.md). Track the work toward strict behavioral
-and feature parity in [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md). Compatibility rules and
-architecture live in [CONTEXT.md](CONTEXT.md) and [AGENTS.md](AGENTS.md).
+To disable presentation, configure the runtime before calling `execute`:
+
+```rust
+let runtime = runtime.with_reporter(std::sync::Arc::new(
+    rustinfra::operations::NullReporter,
+));
+```
+
+Use `TextReporter::new(writer)` to choose an explicit plain-text destination, or implement
+`DeployReporter` for custom presentation.
+
+## Execution model
+
+`PreparedDeploy::prepare` evaluates the Rust closure for each host, registers operations, and
+builds their dependency order. `DeployRuntime::execute` then connects, previews changes, applies
+operations, and disconnects. Preparation and preview do not apply the generated operation commands.
+
+`ExecutionStrategy::Lockstep` finishes an operation across applicable hosts before starting the
+next. Serial and per-host/no-wait strategies are also available. `Config::parallel` bounds host
+concurrency; `OperationOptions` supplies naming, run-once, serial, and per-operation parallel controls.
+Commands within a host operation stay ordered.
+
+## What you can manage
+
+Rustinfra includes operations for files and templates, users and system settings, package managers,
+service managers, Git, cron, containers, databases, and language tooling. Deploy locally or over a
+persistent SSH connection, with typed inputs and bounded parallel execution across hosts.
+
+## Development and documentation
+
+```sh
+cargo fmt --all -- --check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test --all-targets --all-features
+cargo test --doc
+cargo doc --no-deps
+```
+
+- [Architecture and context](CONTEXT.md): lifecycle, boundaries, dependencies, and open decisions.
+- [Contributor guide](AGENTS.md): source-first translation, testing, and code conventions.
+
+Rustinfra is MIT licensed. Pyinfra is the behavioral reference, not a runtime dependency; copied
+reference material retains its required attribution.

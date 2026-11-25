@@ -9,19 +9,20 @@ that is observable through pyinfra's built-in product is in scope.
 
 ## How to use this checklist
 
-- `[x]` means the behavior is implemented, qualified against the reference, and has no known
-  in-scope deviation.
+- In the runtime and verification sections, `[x]` records implemented behavior with existing test
+  coverage. It does not qualify every related reference fixture or platform.
+- In the operation and fact module inventories, `[x]` records implemented catalog surface. The
+  descriptions summarize existing behavior and tests, not a blanket qualification of the module.
 - `[ ]` means the item is not yet qualified. **Partial** identifies existing Rust behavior that
   still needs catalog or fixture coverage. **Missing** means no meaningful implementation exists.
-- Check off a module only after every public operation or fact in that module is represented in the
-  symbol ledger and its applicable reference fixtures pass.
+- Full module qualification requires every applicable fixture to have passing, linked Rust evidence;
+  module inventory checkmarks alone are insufficient.
 - A fixture is qualified only when its ledger row links to the Rust test that exercises its
   observable behavior. Unqualified fixtures remain visible rather than being inferred from symbol
   presence or broad module coverage.
 
 ## Progress snapshot
 
-- **Defensible pyinfra experience parity:** 100% of the measured operation and fact catalog.
 - **Measured built-in catalog surface:** 380/380 symbols (100.00%); see `PARITY_REPORT.md`.
 - **Rust operation surface:** 186/186 source operations across 55 reference modules.
 - **Rust fact surface:** 194/194 fixture-backed facts across 59 reference modules.
@@ -29,9 +30,10 @@ that is observable through pyinfra's built-in product is in scope.
 - **Strongest area:** deploy runtime, concurrency, local execution, and persistent SSH.
 - **Largest remaining gap:** fixture-level and platform qualification beyond catalog coverage.
 
-The experience estimate combines the exact catalog measurement with the qualified runtime and
-connector foundation. It is not a claim of strict behavioral parity for every present symbol;
-remaining fixture qualification and broader release gates stay explicit below.
+There is no aggregate behavioral-parity percentage. Symbol presence, linked fixture evidence,
+runtime tests, connector tests, and platform qualification are separate measurements. Any module
+description below claiming fixture coverage must be read against the committed fixture ledgers;
+unlinked evidence does not count toward the generated qualification total.
 
 ## Parity accounting
 
@@ -40,7 +42,8 @@ remaining fixture qualification and broader release gates stay explicit below.
 - [x] Inventory every reference fixture with an explicit qualified, unqualified, or excluded status.
 - [ ] **Partial** Link every applicable fixture to passing Rust test evidence.
 - [x] Add a deterministic parity report that calculates coverage from the ledgers.
-- [x] Prevent CI from accepting unclassified built-in operations, facts, or fixtures.
+- [x] Provide a report check that rejects stale ledgers, invalid classifications, and missing named
+  test evidence (`python scripts/parity_report.py --check`). No CI workflow is currently committed.
 
 ## Runtime and execution semantics
 
@@ -52,12 +55,16 @@ remaining fixture qualification and broader release gates stay explicit below.
 - [x] Ordered commands, retries, conditional retries, and timeouts.
 - [x] Ignored errors, partial failures, and per-host result accounting.
 - [x] Execution-time fact re-evaluation for desired-state operations.
-- [ ] **Partial** Preparation-time change prediction and complete no-op/change reporting.
+- [ ] **Partial** Read-only previews and per-host success/no-change/failure reporting exist; complete
+  preparation-time prediction and reporting qualification remains.
 - [ ] **Partial** Cancellation across connection, facts, operations, transfers, and cleanup.
 - [ ] **Missing** Complete callback and event lifecycle.
-- [ ] **Missing** Progress rendering and deterministic concurrent output behavior.
+- [ ] **Partial** Animated phases, aligned right-side indicators, live host/operation-attributed
+  output, plain-text fallback, custom reporters, and summaries exist. Complete deterministic
+  concurrent output behavior remains unqualified.
 - [ ] **Missing** Machine-readable output parity.
-- [ ] **Missing** Full CLI behavior and exit-status parity.
+- [ ] **Missing** Full CLI behavior and exit-status parity; the binary entry point is empty and
+  deploys currently run as compiled Rust applications.
 
 ## Operation modules
 

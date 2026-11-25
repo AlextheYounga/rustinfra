@@ -4,7 +4,29 @@ The actionable work list and strict parity accounting live in
 [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md). The percentage milestones below measure product
 capability, not full catalog parity.
 
-## 85% capability milestone
+## Current status
+
+The frozen catalog currently records 186/186 operation symbols and 194/194 fixture-backed fact
+symbols as present. Explicit test-evidence links qualify 279/1700 reference fixtures (16.41%).
+These measure different things: catalog presence is complete, behavioral qualification is not.
+The generated [report](PARITY_REPORT.md) is authoritative for counts; the
+[checklist](PARITY_CHECKLIST.md) tracks runtime, connectors, platforms, and release gates.
+
+The runtime now provides a read-only change preview, host-attributed live stdout/stderr, per-host
+success/no-change/failure reports, and operation summaries. Interactive stderr uses animated phases
+and a shared right-side indicator column; redirected stderr and `TERM=dumb` use plain text. Custom
+`DeployReporter` implementations and `NullReporter` remain available. These presentation hooks do
+not establish complete callback/event or deterministic cross-host output parity.
+
+The supported entry point is a compiled Rust deploy using the library. `src/main.rs` remains empty;
+there is no finished standalone CLI. The built-in runtime constructor supports local and SSH targets.
+
+## Historical capability milestones
+
+The 50%, 75%, and 85% milestones below describe earlier runnable workflow increments. They are not
+current percentages of behavioral parity and should not be combined with catalog measurements.
+
+### 85% capability milestone
 
 Rustinfra has reached the 85% product-capability milestone. This remains a measure of complete,
 runnable infrastructure workflows rather than a claim that 85% of pyinfra's operation and fact
@@ -23,10 +45,10 @@ In addition to the 75% application-deployment foundation, this milestone adds:
 - Locale enablement/disablement and security-limit convergence through the existing typed fact and
   line-editing boundaries.
 
-The milestone is covered by 123 unit and integration tests, the clean-code guards, the persistent
-SSH integration test, and the runnable local deploy example.
+Validation uses the all-target/all-feature suite, clean-code guards, persistent SSH integration
+test, and runnable local deploy example. Test totals change as qualification grows.
 
-## 75% capability milestone
+### 75% capability milestone
 
 Rustinfra has reached the 75% product-capability milestone. As with the 50% milestone below, this
 measures complete deploy workflows rather than the percentage of pyinfra operation and fact names
@@ -58,7 +80,7 @@ ordering, quoting, parsing, no-op behavior, and platform differences. The all-ta
 suite covers the resulting facts and operations, including local end-to-end convergence and the
 persistent SSH integration test.
 
-## 50% capability milestone
+### 50% capability milestone
 
 Rustinfra has reached the initial 50% product-capability milestone. This milestone measures whether
 the central pyinfra workflow is usable end to end, rather than comparing source lines or claiming
@@ -84,7 +106,10 @@ The milestone requires all of the following runnable capabilities:
 These capabilities are covered by the all-target/all-feature test suite, including local end-to-end
 convergence and a persistent SSH integration test.
 
-## Implemented operation areas
+## Examples of implemented operation areas
+
+This list describes the original workflow foundation, not the complete current catalog. The
+operation and fact module inventory is maintained in [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md).
 
 - `server`: shell, wait, kill, hostname, group, user, sysctl, locale, and security limits.
 - `systemd`: service state, enablement, daemon reload, and user/machine scopes.
@@ -99,13 +124,15 @@ convergence and a persistent SSH integration test.
 
 ## Remaining work toward full parity
 
-The 85% milestone is not full pyinfra compatibility. Major remaining areas include:
+Neither the historical milestones nor complete symbol coverage establish full pyinfra compatibility.
+Major remaining areas include:
 
-- The remainder of the operation and fact catalog, including non-systemd init systems, repository
-  signing-key management, databases, additional language package managers, and system settings.
-- Preparation-time change prediction and richer no-op/change reporting.
-- Callbacks/events, progress rendering, machine-readable output, and full CLI behavior.
-- Additional connectors such as Docker/Podman, chroot, and external connector extensibility.
+- Reference-fixture qualification across the now-present operation and fact catalog.
+- Complete preparation-time change prediction and no-op/change reporting qualification.
+- Complete callbacks/events, machine-readable output, and standalone CLI behavior.
+- Deterministic concurrent output guarantees beyond host-attributed, serialized display lines.
+- Additional built-in connectors such as Docker/Podman and chroot. External connector extensibility
+  remains an open design question outside the current parity scope.
 - Cancellation and complete callback/output behavior during concurrent partial failures.
 - Broader platform fixtures and end-to-end coverage across Linux distributions and BSD systems.
 

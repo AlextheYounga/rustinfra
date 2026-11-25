@@ -20,9 +20,9 @@ document was written, that checkout was:
 - Commit: `cd95d5a3`
 - Description: `v3.11.1-9-gcd95d5a3`
 
-That version contains roughly 37,000 lines of production Python, 186 operations, 154 facts, 1,224
-operation fixtures, and 475 fact fixtures. These figures show that parity is a sustained porting
-effort, not a greenfield approximation.
+The frozen ledgers track 186 operations, 194 fixture-backed facts, 1,224 operation fixtures, and 476
+fact fixtures. The fixture-backed fact catalog is not the same measure as counting source classes.
+Current presence and qualification counts are generated in [PARITY_REPORT.md](PARITY_REPORT.md).
 
 The reference source, tests, fixtures, and documentation define expected behavior. The symlink is a
 development aid and must not become a runtime or CI dependency. Updating the baseline should be a
@@ -85,8 +85,44 @@ A run has five ordered stages:
 4. **Execute** re-evaluates operations against current host state and executes generated commands.
 5. **Disconnect** cleans up target connections and reports final results.
 
-Preparation does not retain a complete command list. It advances an operation far enough to detect
-whether it would change the host. During execution, the operation runs again and facts are gathered
+### Current Rust entry points
+
+The lifecycle above is the behavioral model. The current Rust API separates registration from
+connected change prediction:
+
+1. `PreparedDeploy::prepare` evaluates the typed deploy closure for each inventory host, registers
+   operation inputs/options, and resolves ordering. It does not connect or apply operation commands.
+2. `DeployRuntime::execute` connects hosts, enters the prepare stage, and calls the read-only preview.
+   `PreparedDeploy::preview` is also available to callers with their own connectors.
+3. Preview classifies operations by whether command generation returns work. It is not a command
+   snapshot or an approval gate; execution generates commands again using `Phase::Execute` facts.
+4. The scheduler applies operations, records host results, and the runtime disconnects. A summary is
+   emitted when execution reached the result-collection stage; earlier failures need not have one.
+
+Deploy authors remain responsible for avoiding mutating side effects in their Rust preparation
+closures. Rustinfra does not sandbox arbitrary deploy code.
+
+### Reporting boundary
+
+`src/operations/report.rs` owns `DeployReporter`, preview/result/summary types, `TextReporter`, and
+`NullReporter`. `report/compose.rs` owns terminal presentation only. Runtime and prepared-runner
+hooks emit phases, operation starts, output lines, outcomes, and summaries. Connector output
+handlers deliver complete lines while retaining captured output for execution results.
+
+`DeployRuntime` defaults to `ComposeReporter::auto()` on stderr. Interactive terminals use
+`indicatif` animation and `console` display-width measurement: text stays left-aligned and short
+status rows are padded to a shared right-side indicator column. Width is captured at construction;
+long result text is retained and can wrap. Non-terminal stderr or `TERM=dumb` uses plain text.
+
+Lines remain host/operation-attributed under concurrency, but cross-host arrival order is timing
+dependent. Phase completion symbols do not encode success or failure. `execute` returns the actual
+lifecycle result, including disconnect errors. Reporter hooks are not a complete callback/event
+system or a machine-readable output protocol.
+
+Pyinfra preparation advances an operation far enough to detect whether it would change the host,
+without retaining a complete command list. The current Rust preview instead generates a temporary
+command vector and checks whether it is empty; it does not retain that vector for execution.
+During execution, the operation runs again and facts are gathered
 again, allowing earlier operations to affect later decisions. In the current pyinfra baseline, fact
 results are not generally cached; each request executes its fact.
 
@@ -96,7 +132,7 @@ cycle, which must be diagnosed rather than arbitrarily reordered.
 
 ## Parallelism
 
-Parallelism is the planned enhancement and a foundational constraint.
+Parallelism is an implemented runtime capability and a foundational constraint.
 
 Pyinfra already performs concurrent work with gevent, but rustinfra should represent concurrency
 explicitly in its architecture. Connections, preparation, fact gathering, command execution, output
@@ -138,7 +174,10 @@ before a compromise is accepted.
 
 ## CLI and Dependencies
 
-The CLI will use `clap`.
+The planned standalone CLI must use `clap`; the dependency is present, but `src/main.rs` is currently
+empty. The supported workflow is a Rust application using the library, as demonstrated by
+`examples/local_deploy.rs`. CLI flags, inventory-file loading, and exit-status compatibility should
+not be inferred from the library surface.
 
 Deploys are authored as typed Rust code and compiled against the `rustinfra` library. Python deploy
 loading, an embedded Python runtime, and a separate YAML/TOML deploy language are not part of the
@@ -154,44 +193,38 @@ when behavioral parity remains intact.
 Keep the CLI as a thin boundary over a reusable Rust library. Preserve pyinfra's command names,
 arguments, defaults, exit behavior, and output semantics where the Rust interface supports them.
 
-### External Dependency Candidates
+### Selected dependencies
 
-The following crates are candidates, not blanket approvals. Add each dependency when translating
-the behavior that needs it, after checking the relevant pyinfra implementation and fixtures. Avoid
-adding the entire list preemptively.
+The current implementation uses:
 
-Likely foundational dependencies are:
+- `tokio` and `tokio-util` for async execution, processes, synchronization, and cancellation tools.
+- `russh`, `russh-sftp`, and `ssh2-config` for SSH sessions, SFTP, and OpenSSH configuration parsing.
+- `serde`, `serde_json`, and `serde_yaml_ng` at serialization and fixture boundaries; `indexmap` for
+  insertion-ordered data.
+- `minijinja` for templates, `shlex` for shell values, `similar` for diffs, and `tempfile` for temporary
+  files and test environments.
+- `pep440_rs` and `pep508_rs` for Python package version/requirement behavior.
+- `indicatif` and `console` for animated terminal output and Unicode display-width measurement.
+- `thiserror` for typed errors and `tracing`/`tracing-subscriber` for diagnostics.
+- `assert_cmd`, `predicates`, `proptest`, and indicatif's in-memory terminal support for tests.
 
-- `clap` for CLI parsing.
-- `tokio` for asynchronous networking, processes, timeouts, synchronization, and bounded parallel
-  execution. Enable only the features in use rather than `full` by default.
-- `tokio-util` for structured cancellation when execution coordination requires it.
-- `thiserror` for typed library errors.
-- `serde` and `serde_json` for external data boundaries, fixtures, and machine-readable output.
-- `indexmap` where insertion order is part of pyinfra's observable behavior.
-- `tracing` and `tracing-subscriber` for diagnostics that remain attributable under parallel
-  execution.
+`Cargo.toml` and `Cargo.lock` are authoritative for versions and enabled features. No minimum
+supported Rust version is declared yet; the package uses the Rust 2024 edition.
 
-Crates with close equivalents to existing pyinfra behavior include:
+### Dependency selection guidance
 
-- `minijinja` for Jinja2-compatible templates, including strict undefined handling.
-- `shlex` for POSIX shell splitting and quoting, subject to comparison with command fixtures.
-- `petgraph` for operation dependency graphs and cycle detection. Rustinfra may still need a stable
-  traversal on top to preserve pyinfra's tie-breaking order.
-- `serde_yaml_ng` for YAML boundaries and ported fixtures when YAML support is introduced.
-- `similar` for text diffs.
-- `pep440_rs` and `pep508_rs` for Python package versions, requirements, and environment markers.
-- `tempfile` for temporary files used by transfers and tests.
-- `indicatif`, `anstream`, and `anstyle` for progress and terminal-aware output. Consider
-  `comfy-table` if its wrapping and alignment can match the required result output.
+Add dependencies only when translating behavior that needs them, after checking the relevant
+pyinfra source and fixtures. Prefer existing platform and project capabilities first. For example,
+the operation graph already has ordering logic; a graph crate is not required merely because one
+was considered during planning. Enable only runtime features that are actually used.
 
-The leading SSH candidate is `russh` on Tokio, with `russh-sftp` for SFTP. This combination provides
+The selected SSH stack is `russh` on Tokio, with `russh-sftp` for SFTP. This combination provides
 asynchronous persistent sessions, independent channels, key/password/agent authentication, OpenSSH
 certificates, PTYs, forwarding, keepalives, and streamed channel I/O. `ProxyJump` can be built from
 `direct-tcpip` channels, while `ProxyCommand` can provide a bidirectional stream to `russh`.
 
-`russh-config` is a possible SSH configuration parser, but must be tested against pyinfra behavior
-before adoption. The comparison must cover `Include`, OpenSSH precedence, wildcard and negated host
+The current SSH configuration parser is `ssh2-config`. Its integration must be qualified against
+pyinfra behavior, including `Include`, OpenSSH precedence, wildcard and negated host
 matching, token and tilde expansion, repeated identity files, certificates, identity agents,
 `ProxyCommand`, multi-hop `ProxyJump`, and strict-host-key policies. Known-host handling, retries,
 authentication ordering, and transfer policy remain rustinfra responsibilities even when protocol
@@ -205,15 +238,13 @@ daemon API; pyinfra currently invokes their command-line tools, and preserving t
 default. Avoid generic configuration frameworks and young Rich-style terminal ports until a current
 behavior requires them and compatibility has been demonstrated.
 
-Useful development-only candidates include `assert_cmd` and `predicates` for CLI behavior,
-`proptest` for parser and quoting edge cases, `insta` for selected diagnostic snapshots, and
-`testcontainers` for optional connector integration environments. Existing data-driven pyinfra
-fixtures should generally remain explicit compatibility tests rather than being converted wholesale
-to snapshots.
+Existing data-driven pyinfra fixtures should remain explicit compatibility tests rather than being
+converted wholesale to snapshots. Additional snapshot or container-test dependencies need a concrete
+qualification requirement, not a hypothetical future use.
 
-Before selecting an exact `russh` version and cryptography backend, define the project's supported
-Rust version and verify build portability. Crate availability alone is not evidence of behavioral
-parity.
+The SSH versions are now pinned by the lockfile. Supported Rust versions, cryptography-backend
+portability, and platform qualification still need explicit release policy. Crate availability
+alone is not evidence of behavioral parity.
 
 ## Validation Strategy
 
@@ -237,10 +268,17 @@ The project currently validates Rust code with:
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features
+cargo test --doc
+python scripts/parity_report.py --check
 ```
 
 The repository also enforces a 400-line maximum for Rust source files and checks for duplicated
 state-bearing string literals.
+
+The report check validates committed symbol/fixture ledgers and named test references; it does not
+execute those tests or establish behavioral equivalence itself. There is currently no committed
+CI workflow. A passing local suite does not substitute for the broader platform and connector gates
+in [PARITY_CHECKLIST.md](PARITY_CHECKLIST.md).
 
 ## Non-Goals
 
@@ -257,11 +295,12 @@ state-bearing string literals.
 The following decisions remain open and should be resolved explicitly when their implementation is
 approached:
 
-- Which concurrency runtime best preserves the required scheduling and I/O behavior.
-- Which SSH crate or combination of crates can meet the compatibility requirements.
 - How connector extensibility maps from Python entry points to Rust without introducing an
-  unnecessary plugin ABI.
+  unnecessary plugin ABI. External plugin compatibility is excluded from the current parity scope,
+  not implicitly designed by the built-in connector work.
 - Which inventory and configuration formats accompany the Rust API.
+- The standalone CLI interface and machine-readable output contract.
+- The minimum supported Rust version and release platform matrix.
 
 Until resolved, these questions are constraints to investigate, not invitations to choose a new
 product model implicitly.

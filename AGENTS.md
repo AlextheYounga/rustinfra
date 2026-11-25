@@ -13,6 +13,30 @@ behavior and tests rather than guessing.
 
 Do not modify files under `pyinfra/` as part of the Rust port.
 
+## Current Implementation and Documentation
+
+Deploys currently run as compiled Rust applications using the library; `src/main.rs` is empty.
+`examples/local_deploy.rs` is the runnable getting-started reference. `DeployRuntime::from_inventory`
+constructs local and SSH connectors, not every built-in connector in the parity target.
+
+Keep documentation claims tied to evidence:
+
+- `README.md` owns the user-facing introduction, setup, deploy example, reporting, and limitations.
+- `CONTEXT.md` owns architecture, selected dependencies, and open decisions.
+- `PARITY.md` summarizes current status and preserves historical capability milestones.
+- `PARITY_CHECKLIST.md` owns remaining qualification and release gates.
+- `PARITY_REPORT.md` is generated from `parity/*.tsv`; regenerate it with
+  `python scripts/parity_report.py`, never edit its counts by hand.
+
+Catalog symbol presence is not behavioral parity. Do not turn a module inventory checkmark or an
+older capability milestone into a full-parity claim. Reference-fixture qualification requires linked
+test evidence; the report check verifies references, while the Rust suite executes the tests.
+
+Keep terminal formatting in `src/operations/report/compose.rs`, behind `DeployReporter`. Preserve
+plain-text fallback, custom reporters, `NullReporter`, and host/operation attribution. Phase-finished
+events describe lifecycle completion, not success. Do not infer successful execution from a rendered
+checkmark or summary; preserve the returned runtime error.
+
 ## Primary Rule: Translate, Do Not Redesign
 
 Pyinfra has already solved the product and domain problems. Preserve those solutions unless a
@@ -169,6 +193,8 @@ Run before completing a change:
 cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets --all-features
+cargo test --doc
+python scripts/parity_report.py --check
 ```
 
 Review the final diff for accidental behavior changes, missing tests, stale documentation, dead
