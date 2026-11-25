@@ -4,27 +4,46 @@ use indexmap::IndexMap;
 use tokio::sync::Mutex;
 
 use crate::api::HostResults;
-use crate::connectors::Connector;
+use crate::connectors::{Connector, OutputHandler};
 
 use super::scheduler::OperationFuture;
-use super::{OperationExecution, OperationExecutor, OperationId, OperationRunner, OperationTaskError};
+use super::{
+    DeployReporter, HostOperationReport, HostOperationStatus, OperationExecution, OperationExecutor, OperationId,
+    OperationRunner, OperationTaskError,
+};
 
 pub(crate) struct PreparedOperationRunner {
     connectors: IndexMap<String, Arc<dyn Connector>>,
     executions: IndexMap<(String, OperationId), OperationExecution>,
+    names: IndexMap<OperationId, String>,
+    reporter: Arc<dyn DeployReporter>,
     results: Arc<Mutex<IndexMap<String, HostResults>>>,
+    operation_reports: Arc<Mutex<Vec<HostOperationReport>>>,
 }
 
 impl PreparedOperationRunner {
     pub fn new(
         connectors: IndexMap<String, Arc<dyn Connector>>,
         executions: IndexMap<(String, OperationId), OperationExecution>,
+        names: IndexMap<OperationId, String>,
+        reporter: Arc<dyn DeployReporter>,
     ) -> Self {
-        Self { connectors, executions, results: Arc::new(Mutex::new(IndexMap::new())) }
+        Self {
+            connectors,
+            executions,
+            names,
+            reporter,
+            results: Arc::new(Mutex::new(IndexMap::new())),
+            operation_reports: Arc::new(Mutex::new(Vec::new())),
+        }
     }
 
     pub async fn results(&self) -> IndexMap<String, HostResults> {
         self.results.lock().await.clone()
+    }
+
+    pub async fn operation_reports(&self) -> Vec<HostOperationReport> {
+        self.operation_reports.lock().await.clone()
     }
 }
 
@@ -38,10 +57,38 @@ impl OperationRunner for PreparedOperationRunner {
             let execution = self.executions.get(&(host.to_owned(), operation.clone())).ok_or_else(|| {
                 OperationTaskError { message: format!("host {host} has no prepared operation {}", operation.as_str()) }
             })?;
-            let result = OperationExecutor.execute(connector.as_ref(), execution).await;
+            let operation_name = self.names.get(operation).cloned().unwrap_or_else(|| operation.as_str().to_owned());
+            self.reporter.operation_started(host, &operation_name);
+            let output_reporter = Arc::clone(&self.reporter);
+            let output_host = host.to_owned();
+            let output_operation = operation_name.clone();
+            let output_handler = OutputHandler::new(move |line| {
+                output_reporter.operation_output(&output_host, &output_operation, line);
+            });
+            let result = OperationExecutor
+                .execute_with_output_handler(connector.as_ref(), execution, Some(output_handler))
+                .await;
             let return_status = result.return_status;
             let error_message = result.error.as_ref().map(ToString::to_string);
             self.record_result(host, &result).await;
+            let status = if result.success && result.executed_commands == 0 {
+                HostOperationStatus::NoChange
+            } else if result.success {
+                HostOperationStatus::Success
+            } else if result.ignored_error {
+                HostOperationStatus::IgnoredFailure
+            } else {
+                HostOperationStatus::Failed
+            };
+            let report = HostOperationReport {
+                operation_id: operation.clone(),
+                operation: operation_name,
+                host: host.to_owned(),
+                status,
+                message: error_message.clone(),
+            };
+            self.operation_reports.lock().await.push(report.clone());
+            self.reporter.operation_result(&report);
             if return_status {
                 Ok(())
             } else {

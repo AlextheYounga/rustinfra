@@ -42,6 +42,7 @@ pub mod postgresql;
 mod prepared_runner;
 pub mod puppet;
 pub mod python;
+mod report;
 mod retry;
 mod rpm_manager;
 pub mod runit;
@@ -64,9 +65,13 @@ pub mod zfs;
 pub mod zypper;
 
 pub use command_executor::{CommandAttempt, CommandExecutionError, CommandExecutor};
-pub use deploy::{DeployError, DeployHost, OperationOptions, PreparedDeploy, PreparedOperation};
+pub use deploy::{DeployError, DeployHost, DeployPreviewError, OperationOptions, PreparedDeploy, PreparedOperation};
 pub use order::{CycleEdge, OperationGraph, OperationId, OperationMeta, OperationOrderError};
 pub(crate) use prepared_runner::PreparedOperationRunner;
+pub use report::{
+    ComposeReporter, DeployPhase, DeployPreview, DeployReporter, DeploySummary, HostOperationReport,
+    HostOperationStatus, NullReporter, OperationPreview, OperationSummary, TextReporter,
+};
 pub use retry::{
     OperationExecution, OperationExecutionOptions, OperationExecutionResult, OperationExecutor, RetryContext,
     RetryPredicate,

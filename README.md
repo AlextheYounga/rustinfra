@@ -50,6 +50,13 @@ Run it:
 cargo run --example local_deploy
 ```
 
+Before applying operations, rustinfra reads each host's current state and displays the proposed
+changes. Interactive terminals get a Docker Compose-inspired display with animated connect, plan,
+apply, and disconnect phases. Command output remains visible with host and operation prefixes, and
+each host operation reports `Success`, `No changes`, or `Failed`. Redirected output and CI logs use a
+stable plain-text format. Deploys that need another presentation can provide a `DeployReporter`;
+`NullReporter` disables output.
+
 ## Where it stands
 
 rustinfra has reached the **85% product-capability milestone**. That means the core deployment

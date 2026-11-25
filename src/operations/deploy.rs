@@ -14,6 +14,10 @@ use super::{
     OperationMeta, OperationOrderError, OperationRunSpec, PreparedOperationRunner, StatefulOperation,
 };
 
+mod preview;
+
+pub use preview::DeployPreviewError;
+
 /// Execution and display controls attached to one operation call.
 #[derive(Clone, Default)]
 pub struct OperationOptions {
@@ -69,13 +73,16 @@ impl PreparedDeploy {
     pub(crate) fn runner(
         &self,
         connectors: &IndexMap<String, Arc<dyn Connector>>,
+        reporter: Arc<dyn super::DeployReporter>,
     ) -> Result<PreparedOperationRunner, DeployError> {
         for host in &self.plan.hosts {
             if !connectors.contains_key(host) {
                 return Err(DeployError::MissingConnector(host.clone()));
             }
         }
-        Ok(PreparedOperationRunner::new(connectors.clone(), self.executions.clone()))
+        let names =
+            self.operations.iter().map(|(id, operation)| (id.clone(), operation.display_name.clone())).collect();
+        Ok(PreparedOperationRunner::new(connectors.clone(), self.executions.clone(), names, reporter))
     }
 }
 
@@ -231,10 +238,11 @@ impl<'a> DeployHost<'a> {
         let execution = OperationExecution::new_async(
             self.host.name(),
             operation.name(),
-            move |connector| {
+            move |connector, phase| {
                 let operation = Arc::clone(&operation);
                 let input = Arc::clone(&input);
-                let fact_options = fact_options.clone();
+                let mut fact_options = fact_options.clone();
+                fact_options.phase = phase;
                 Box::pin(async move {
                     operation
                         .commands(input.as_ref(), connector, &fact_options)
@@ -319,49 +327,4 @@ pub enum DeployError {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{OperationOptions, PreparedDeploy};
-    use crate::api::{HostSpec, Inventory, InventorySpec};
-    use crate::operations::server::{Shell, ShellCommands};
-
-    fn inventory() -> Inventory {
-        Inventory::from_spec(InventorySpec {
-            hosts: vec![HostSpec::ssh("one"), HostSpec::ssh("two")],
-            ..InventorySpec::default()
-        })
-        .unwrap()
-    }
-
-    #[test]
-    fn preparation_merges_matching_calls_and_keeps_host_specific_paths() {
-        let deploy = PreparedDeploy::prepare(&inventory(), |host| {
-            let command = format!("echo {}", host.host().name());
-            host.add(Shell, ShellCommands::from(command))?;
-            if host.host().name() == "two" {
-                host.add(Shell, ShellCommands::from("echo only-two"))?;
-            }
-            Ok(())
-        })
-        .unwrap();
-
-        assert_eq!(deploy.plan.operations.len(), 2);
-        assert_eq!(deploy.plan.operations[0].hosts.len(), 2);
-        assert_eq!(deploy.plan.operations[1].hosts.iter().map(String::as_str).collect::<Vec<_>>(), vec!["two"]);
-    }
-
-    #[test]
-    fn run_once_is_attached_only_to_the_first_host_that_reaches_the_call() {
-        let deploy = PreparedDeploy::prepare(&inventory(), |host| {
-            host.add_with_options(
-                Shell,
-                ShellCommands::from("echo once"),
-                OperationOptions { run_once: true, ..OperationOptions::default() },
-            )?;
-            Ok(())
-        })
-        .unwrap();
-
-        assert_eq!(deploy.plan.operations.len(), 1);
-        assert_eq!(deploy.plan.operations[0].hosts.iter().map(String::as_str).collect::<Vec<_>>(), vec!["one"]);
-    }
-}
+mod tests;
